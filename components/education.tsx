@@ -126,7 +126,7 @@ export default function Education() {
                 <div>
                   <h3 className="text-3xl font-black text-foreground mb-4">Market Fundamentals - Complete Guide</h3>
                   <p className="text-lg text-foreground/80 max-w-3xl">
-                    {resources[0].detailedContent.introduction}
+                    {resources[0].detailedContent?.introduction}
                   </p>
                 </div>
                 <button 
@@ -138,8 +138,8 @@ export default function Education() {
               </div>
 
               <div className="space-y-8">
-                {resources[0].detailedContent.sections.map((section, idx) => (
-                  <div key={idx} className="pb-6" style={{ borderBottom: idx < resources[0].detailedContent.sections.length - 1 ? "1px solid var(--border)" : "none" }}>
+                {resources[0].detailedContent?.sections.map((section, idx) => (
+                  <div key={idx} className="pb-6" style={{ borderBottom: idx < (resources[0].detailedContent?.sections.length ?? 0) - 1 ? "1px solid var(--border)" : "none" }}>
                     <h4 className="text-xl font-bold text-primary mb-3">{section.title}</h4>
                     <p className="text-foreground/80 leading-relaxed whitespace-pre-line">{section.content}</p>
                   </div>
@@ -148,7 +148,7 @@ export default function Education() {
 
               <div className="mt-8 p-6 rounded-xl" style={{ border: "1px solid var(--border)", backgroundColor: "var(--background)" }}>
                 <h4 className="text-xl font-bold text-foreground mb-3">Conclusion</h4>
-                <p className="text-foreground/80 leading-relaxed">{resources[0].detailedContent.conclusion}</p>
+                <p className="text-foreground/80 leading-relaxed">{resources[0].detailedContent?.conclusion}</p>
               </div>
             </div>
           </div>

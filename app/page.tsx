@@ -49,13 +49,29 @@ export default function Home() {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Set a timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.log("Auth check timed out")
+        setLoading(false)
+        setIsLoggedIn(false)
+      }, 5000) // 5 second timeout
+
       try {
         console.log("Checking auth...")
         const {
           data: { user },
+          error: userError,
         } = await supabase.auth.getUser()
 
-        console.log("User:", user)
+        console.log("User:", user, "Error:", userError)
+
+        if (userError) {
+          console.error("Error getting user:", userError)
+          clearTimeout(timeoutId)
+          setIsLoggedIn(false)
+          setLoading(false)
+          return
+        }
 
         if (user) {
           setIsLoggedIn(true)
@@ -80,6 +96,7 @@ export default function Home() {
         console.error("Auth check failed:", err)
         setIsLoggedIn(false)
       } finally {
+        clearTimeout(timeoutId)
         console.log("Setting loading to false")
         setLoading(false)
       }
