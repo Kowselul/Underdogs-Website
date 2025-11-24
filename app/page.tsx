@@ -126,17 +126,40 @@ export default function Home() {
 
   // Handle successful login
   const handleLogin = async () => {
-    // Re-check auth to get latest user data
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (user) {
-      const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).single()
-      if (profile) {
-        setUsername(profile.username)
+    try {
+      console.log("handleLogin called")
+      // Wait a bit for auth state to propagate
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Re-check auth to get latest user data
+      const { data: { user }, error } = await supabase.auth.getUser()
+      
+      console.log("After login - User:", user, "Error:", error)
+      
+      if (error) {
+        console.error("Error getting user after login:", error)
+        return
       }
-      setIsLoggedIn(true)
+      
+      if (user) {
+        console.log("User found, fetching profile...")
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", user.id)
+          .single()
+        
+        console.log("Profile:", profile, "Error:", profileError)
+        
+        if (profile) {
+          setUsername(profile.username)
+        }
+        setIsLoggedIn(true)
+      }
+      setActiveTab("home")
+    } catch (err) {
+      console.error("handleLogin error:", err)
     }
-    setActiveTab("home")
   }
 
   const handleLogout = async () => {

@@ -50,12 +50,12 @@ export default function Login({ onSwitchToRegister, onLoginSuccess }: LoginProps
       if (signInError) throw signInError
       
       if (data.user) {
-        // Wait a bit for the auth state to update
-        await new Promise(resolve => setTimeout(resolve, 100))
-        router.refresh()
+        console.log("Login successful, user:", data.user.id)
+        // Call the success callback
         onLoginSuccess()
       }
     } catch (err) {
+      console.error("Login error:", err)
       setError(err instanceof Error ? err.message : "Login failed. Please try again.")
     } finally {
       setIsLoading(false)
