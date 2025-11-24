@@ -13,12 +13,7 @@ import SearchResults from "@/components/search-results"
 import Footer from "@/components/footer"
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("activeTab") || "home"
-    }
-    return "home"
-  })
+  const [activeTab, setActiveTab] = useState("home")
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
@@ -42,10 +37,10 @@ export default function Home() {
     }
   }, [isDarkMode])
 
-  // Persist active tab to localStorage
+  // Reset to home tab when returning to the site
   useEffect(() => {
-    localStorage.setItem("activeTab", activeTab)
-  }, [activeTab])
+    setActiveTab("home")
+  }, [])
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -58,30 +53,29 @@ export default function Home() {
 
       try {
         console.log("Checking auth...")
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser()
-
-        console.log("User:", user, "Error:", userError)
-
-        if (userError) {
-          console.error("Error getting user:", userError)
+        
+        // First check if there's a session in storage
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        console.log("Session:", session, "Error:", sessionError)
+        
+        if (sessionError) {
+          console.error("Error getting session:", sessionError)
           clearTimeout(timeoutId)
           setIsLoggedIn(false)
           setLoading(false)
           return
         }
 
-        if (user) {
+        if (session?.user) {
           setIsLoggedIn(true)
 
           // Fetch username from profiles table
-          console.log("Fetching profile for user:", user.id)
+          console.log("Fetching profile for user:", session.user.id)
           const { data: profile, error: profileError } = await supabase
             .from("profiles")
             .select("username")
-            .eq("id", user.id)
+            .eq("id", session.user.id)
             .single()
 
           console.log("Profile data:", profile, "Error:", profileError)
