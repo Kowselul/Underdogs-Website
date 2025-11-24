@@ -13,7 +13,9 @@ interface ProfileProps {
 interface Post {
   id: string
   content: string
+  image_url?: string
   created_at: string
+  updated_at?: string
   likes_count: number
   comments_count: number
   user_liked: boolean
@@ -49,6 +51,11 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
   const [newComment, setNewComment] = useState("")
   const [postComments, setPostComments] = useState<{ [key: string]: any[] }>({})
   const [isOwnProfile, setIsOwnProfile] = useState(true)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [editingPostId, setEditingPostId] = useState<string | null>(null)
+  const [editPostContent, setEditPostContent] = useState("")
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   const [passwords, setPasswords] = useState({
     currentPassword: "",
@@ -207,8 +214,8 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
     }
   }
 
-  const addPost = async () => {
-    if (!newPost.trim()) return
+  const addPost = async (imageFile?: File) => {
+    if (!newPost.trim() && !imageFile) return
 
     try {
       const {
@@ -217,10 +224,34 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
       } = await supabase.auth.getUser()
       if (userError || !user) throw new Error("Not authenticated")
 
+      let imageUrl = null
+
+      // Upload image if provided
+      if (imageFile) {
+        setUploadingImage(true)
+        const fileExt = imageFile.name.split('.').pop()
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`
+        const filePath = `post-images/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('posts')
+          .upload(filePath, imageFile)
+
+        if (uploadError) throw uploadError
+
+        const { data: urlData } = supabase.storage
+          .from('posts')
+          .getPublicUrl(filePath)
+        
+        imageUrl = urlData.publicUrl
+        setUploadingImage(false)
+      }
+
       const { data, error: postError } = await supabase
         .from("posts")
         .insert({
           content: newPost,
+          image_url: imageUrl,
           user_id: user.id,
         })
         .select()
@@ -232,6 +263,62 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
       setNewPost("")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create post")
+      setUploadingImage(false)
+    }
+  }
+
+  const updatePost = async (postId: string) => {
+    if (!editPostContent.trim()) return
+
+    try {
+      const { error: updateError } = await supabase
+        .from("posts")
+        .update({
+          content: editPostContent,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", postId)
+
+      if (updateError) throw updateError
+
+      setPosts(posts.map(p =>
+        p.id === postId
+          ? { ...p, content: editPostContent, updated_at: new Date().toISOString() }
+          : p
+      ))
+      setEditingPostId(null)
+      setEditPostContent("")
+      setSuccessMessage("Post updated successfully!")
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update post")
+    }
+  }
+
+  const deletePost = async (postId: string, imageUrl?: string) => {
+    if (!confirm("Are you sure you want to delete this post?")) return
+
+    try {
+      // Delete image from storage if exists
+      if (imageUrl) {
+        const filePath = imageUrl.split('/posts/')[1]
+        if (filePath) {
+          await supabase.storage.from('posts').remove([filePath])
+        }
+      }
+
+      const { error: deleteError } = await supabase
+        .from("posts")
+        .delete()
+        .eq("id", postId)
+
+      if (deleteError) throw deleteError
+
+      setPosts(posts.filter(p => p.id !== postId))
+      setSuccessMessage("Post deleted successfully!")
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete post")
     }
   }
 
@@ -986,16 +1073,35 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                     rows={3}
                   />
                 </div>
-                <div className="flex justify-end">
+                <div className="flex justify-between items-center">
+                  <label className="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors">
+                    <svg className="w-5 h-5 text-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-sm text-foreground/70">Add Photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          addPost(e.target.files[0])
+                          e.target.value = ''
+                        }
+                      }}
+                      disabled={uploadingImage}
+                    />
+                  </label>
                   <button
-                    onClick={addPost}
-                    className="px-6 py-2 rounded-lg font-semibold transition-all hover-lift"
+                    onClick={() => addPost()}
+                    disabled={uploadingImage}
+                    className="px-6 py-2 rounded-lg font-semibold transition-all hover-lift disabled:opacity-50"
                     style={{
                       backgroundColor: "var(--primary)",
                       color: "var(--primary-foreground)",
                     }}
                   >
-                    Post
+                    {uploadingImage ? "Uploading..." : "Post"}
                   </button>
                 </div>
               </div>
@@ -1037,12 +1143,98 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className="font-bold text-foreground">@{profile.username}</p>
-                      <p className="text-sm text-foreground/60">{new Date(post.created_at).toLocaleDateString()}</p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-foreground">@{profile.username}</p>
+                          <p className="text-sm text-foreground/60">
+                            {new Date(post.created_at).toLocaleDateString()}
+                            {post.updated_at && post.updated_at !== post.created_at && (
+                              <span className="ml-2 text-xs">(edited)</span>
+                            )}
+                          </p>
+                        </div>
+                        {isOwnProfile && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setEditingPostId(post.id)
+                                setEditPostContent(post.content)
+                              }}
+                              className="p-2 text-foreground/60 hover:text-primary transition-colors"
+                              title="Edit post"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => deletePost(post.id, post.image_url)}
+                              className="p-2 text-foreground/60 hover:text-red-500 transition-colors"
+                              title="Delete post"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <p className="text-foreground/80 mb-4">{post.content}</p>
+                  {editingPostId === post.id ? (
+                    <div className="mb-4 space-y-3">
+                      <textarea
+                        value={editPostContent}
+                        onChange={(e) => setEditPostContent(e.target.value)}
+                        className="w-full px-4 py-3 rounded-lg resize-none focus:outline-none transition-all"
+                        style={{
+                          backgroundColor: "var(--input)",
+                          border: "1px solid var(--border)",
+                          color: "var(--foreground)",
+                        }}
+                        rows={3}
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => updatePost(post.id)}
+                          className="px-4 py-2 rounded-lg font-semibold transition-all hover-lift"
+                          style={{
+                            backgroundColor: "var(--primary)",
+                            color: "var(--primary-foreground)",
+                          }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingPostId(null)
+                            setEditPostContent("")
+                          }}
+                          className="px-4 py-2 rounded-lg font-semibold transition-all hover:bg-secondary/50"
+                          style={{
+                            border: "1px solid var(--border)",
+                            color: "var(--foreground)",
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-foreground/80 mb-4">{post.content}</p>
+                      {post.image_url && (
+                        <div className="mb-4 rounded-lg overflow-hidden">
+                          <img 
+                            src={post.image_url} 
+                            alt="Post image" 
+                            className="w-full h-auto object-cover max-h-96"
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
 
                   {/* Post Actions */}
                   <div className="flex gap-6 pt-4" style={{ borderTop: "1px solid var(--border)" }}>

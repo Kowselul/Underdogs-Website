@@ -53,15 +53,13 @@ export default function Navigation({
       <div className="mx-auto max-w-7xl px-6 py-4 sm:px-8">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <button onClick={() => setActiveTab("home")} className="flex items-center gap-2 hover-lift">
-            <div className="h-10 w-10 rounded-full overflow-hidden flex items-center justify-center">
-              <img 
-                src="/images/underdogs-1.png" 
-                alt="Underdogs Logo" 
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <span className="text-lg font-bold tracking-tight text-foreground hidden sm:inline">UNDERDOGS</span>
+          <button 
+            onClick={() => setActiveTab("home")} 
+            className="group flex items-center gap-3 hover-lift"
+          >
+            <span className="text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary to-secondary">
+              UNDERDOGS
+            </span>
           </button>
 
           {/* Desktop Navigation */}
