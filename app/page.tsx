@@ -15,7 +15,12 @@ import Footer from "@/components/footer"
 export default function Home() {
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("activeTab") || "home"
+      const saved = localStorage.getItem("activeTab")
+      // Don't restore login/register from localStorage - always start at home if not logged in
+      if (saved === "login" || saved === "register") {
+        return "home"
+      }
+      return saved || "home"
     }
     return "home"
   })
@@ -170,6 +175,7 @@ export default function Home() {
         setIsLoggedIn(true)
       }
       setActiveTab("home")
+      localStorage.setItem("activeTab", "home")
     } catch (err) {
       console.error("handleLogin error:", err)
     }
@@ -180,7 +186,9 @@ export default function Home() {
       await supabase.auth.signOut()
       setIsLoggedIn(false)
       setUsername("")
+      setViewingUsername(null)
       setActiveTab("home")
+      localStorage.setItem("activeTab", "home")
     } catch (err) {
       console.error("Logout failed:", err)
     }

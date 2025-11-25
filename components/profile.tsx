@@ -143,6 +143,8 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
           discord_tag: profileData.discord_tag || "",
           tiktok_url: profileData.tiktok_url || "",
           website_url: profileData.website_url || "",
+          role: profileData.role || "user",
+          is_admin: profileData.is_admin || false,
         })
 
         // Fetch posts
