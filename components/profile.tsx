@@ -8,6 +8,7 @@ interface ProfileProps {
   activeTab?: string
   setActiveTab?: (tab: string) => void
   viewingUsername?: string | null
+  onUserClick?: (username: string) => void
 }
 
 interface Post {
@@ -36,7 +37,7 @@ interface Profile {
   website_url: string
 }
 
-export default function Profile({ activeTab = "profile", setActiveTab, viewingUsername }: ProfileProps) {
+export default function Profile({ activeTab = "profile", setActiveTab, viewingUsername, onUserClick }: ProfileProps) {
   const supabase = createClient()
 
   const [isEditing, setIsEditing] = useState(false)
@@ -51,7 +52,12 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
   const [newComment, setNewComment] = useState("")
   const [postComments, setPostComments] = useState<{ [key: string]: any[] }>({})
   const [isOwnProfile, setIsOwnProfile] = useState(true)
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [replyContent, setReplyContent] = useState("")
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [modalImage, setModalImage] = useState<string | null>(null)
+  const [imageZoom, setImageZoom] = useState(1)
+  const [likedComments, setLikedComments] = useState<Set<string>>(new Set())
   const [editingPostId, setEditingPostId] = useState<string | null>(null)
   const [editPostContent, setEditPostContent] = useState("")
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
@@ -91,13 +97,13 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
         if (userError || !user) throw new Error("Not authenticated")
 
         let targetUserId = user.id
-        
+
         // If viewing another user's profile
         if (viewingUsername) {
           const { data: targetProfile, error: targetError } = await supabase
             .from("profiles")
             .select("id")
-            .eq("username", viewingUsername)
+            .ilike("username", viewingUsername)
             .single()
 
           if (targetError || !targetProfile) {
@@ -180,7 +186,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
       const {
         data: { user },
       } = await supabase.auth.getUser()
-      
+
       if (!user) throw new Error("Not authenticated")
 
       const fileName = `${user.id}-${Math.random()}.${fileExt}`
@@ -218,6 +224,8 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
     if (!newPost.trim() && !imageFile) return
 
     try {
+      setUploadingImage(true)
+
       const {
         data: { user },
         error: userError,
@@ -228,25 +236,31 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
 
       // Upload image if provided
       if (imageFile) {
-        setUploadingImage(true)
+        console.log("Uploading image:", imageFile.name, imageFile.type, imageFile.size)
         const fileExt = imageFile.name.split('.').pop()
         const fileName = `${user.id}-${Date.now()}.${fileExt}`
         const filePath = `post-images/${fileName}`
 
+        console.log("Attempting upload to:", filePath)
         const { error: uploadError } = await supabase.storage
           .from('posts')
           .upload(filePath, imageFile)
 
-        if (uploadError) throw uploadError
+        if (uploadError) {
+          console.error("Upload error:", uploadError)
+          throw uploadError
+        }
 
+        console.log("Upload successful, getting public URL")
         const { data: urlData } = supabase.storage
           .from('posts')
           .getPublicUrl(filePath)
-        
+
         imageUrl = urlData.publicUrl
-        setUploadingImage(false)
+        console.log("Public URL:", imageUrl)
       }
 
+      console.log("Inserting post with content:", newPost, "and image:", imageUrl)
       const { data, error: postError } = await supabase
         .from("posts")
         .insert({
@@ -257,11 +271,19 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
         .select()
         .single()
 
-      if (postError) throw postError
+      if (postError) {
+        console.error("Post error:", postError)
+        throw postError
+      }
 
-      setPosts([{ ...data, user_liked: false }, ...posts])
+      console.log("Post created successfully:", data)
+      setPosts([{ ...data, user_liked: false, comments_count: 0 }, ...posts])
       setNewPost("")
+      setSelectedImage(null)
+      setImagePreview(null)
+      setUploadingImage(false)
     } catch (err) {
+      console.error("Full error:", err)
       setError(err instanceof Error ? err.message : "Failed to create post")
       setUploadingImage(false)
     }
@@ -368,14 +390,32 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
 
   const loadComments = async (postId: string) => {
     try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
       // Fetch comments
       const { data: commentsData, error: commentsError } = await supabase
         .from("comments")
         .select("*")
         .eq("post_id", postId)
+        .is("parent_comment_id", null)
         .order("created_at", { ascending: true })
 
       if (commentsError) throw commentsError
+
+      // Fetch user's liked comments
+      if (user && commentsData && commentsData.length > 0) {
+        const commentIds = commentsData.map(c => c.id)
+        const { data: likesData } = await supabase
+          .from("comment_likes")
+          .select("comment_id")
+          .eq("user_id", user.id)
+          .in("comment_id", commentIds)
+
+        const likedIds = new Set(likesData?.map(l => l.comment_id) || [])
+        setLikedComments(prev => new Set([...prev, ...likedIds]))
+      }
 
       // Fetch user profiles for comments
       if (commentsData && commentsData.length > 0) {
@@ -386,7 +426,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
           .in("id", userIds)
 
         const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || [])
-        
+
         const enrichedComments = commentsData.map(comment => ({
           ...comment,
           profiles: profilesMap.get(comment.user_id)
@@ -413,8 +453,9 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
     }
   }
 
-  const addComment = async (postId: string) => {
-    if (!newComment.trim()) return
+  const addComment = async (postId: string, parentCommentId: string | null = null) => {
+    const content = parentCommentId ? replyContent : newComment
+    if (!content.trim()) return
 
     try {
       const {
@@ -427,7 +468,8 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
         .insert({
           post_id: postId,
           user_id: user.id,
-          content: newComment,
+          content: content,
+          parent_comment_id: parentCommentId,
         })
         .select("*")
         .single()
@@ -443,23 +485,197 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
 
       const enrichedComment = {
         ...data,
-        profiles: profileData
+        profiles: profileData,
+        replies: []
       }
 
-      setPostComments({
-        ...postComments,
-        [postId]: [...(postComments[postId] || []), enrichedComment]
-      })
+      if (parentCommentId) {
+        // Add reply to the parent comment
+        setPostComments({
+          ...postComments,
+          [postId]: postComments[postId].map(c =>
+            c.id === parentCommentId
+              ? { ...c, replies: [...(c.replies || []), enrichedComment] }
+              : c
+          )
+        })
+        setReplyContent("")
+        setReplyingTo(null)
+      } else {
+        // Add new top-level comment
+        setPostComments({
+          ...postComments,
+          [postId]: [...(postComments[postId] || []), enrichedComment]
+        })
+        setNewComment("")
+      }
 
       setPosts(posts.map(p =>
         p.id === postId
           ? { ...p, comments_count: p.comments_count + 1 }
           : p
       ))
-
-      setNewComment("")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add comment")
+    }
+  }
+
+  const deleteComment = async (postId: string, commentId: string, parentCommentId: string | null = null) => {
+    try {
+      const { error } = await supabase
+        .from("comments")
+        .delete()
+        .eq("id", commentId)
+
+      if (error) throw error
+
+      // Update local state
+      if (parentCommentId) {
+        // Remove reply from parent comment
+        setPostComments({
+          ...postComments,
+          [postId]: postComments[postId].map(c =>
+            c.id === parentCommentId
+              ? { ...c, replies: c.replies?.filter((r: any) => r.id !== commentId) || [] }
+              : c
+          )
+        })
+      } else {
+        // Remove top-level comment
+        setPostComments({
+          ...postComments,
+          [postId]: postComments[postId].filter(c => c.id !== commentId)
+        })
+      }
+
+      setPosts(posts.map(p =>
+        p.id === postId
+          ? { ...p, comments_count: p.comments_count - 1 }
+          : p
+      ))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete comment")
+    }
+  }
+
+  const toggleCommentLike = async (commentId: string, postId: string) => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error("Not authenticated")
+
+      const isLiked = likedComments.has(commentId)
+
+      if (isLiked) {
+        // Unlike
+        const { error } = await supabase
+          .from("comment_likes")
+          .delete()
+          .eq("comment_id", commentId)
+          .eq("user_id", user.id)
+
+        if (error) throw error
+
+        setLikedComments(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(commentId)
+          return newSet
+        })
+      } else {
+        // Like
+        const { error } = await supabase
+          .from("comment_likes")
+          .insert({
+            comment_id: commentId,
+            user_id: user.id,
+          })
+
+        if (error) throw error
+
+        setLikedComments(prev => new Set(prev).add(commentId))
+      }
+
+      // Update comment likes count in local state
+      const updateCommentInList = (comments: any[]): any[] => {
+        return comments.map(c => {
+          if (c.id === commentId) {
+            return {
+              ...c,
+              likes_count: (c.likes_count || 0) + (isLiked ? -1 : 1)
+            }
+          }
+          if (c.replies) {
+            return {
+              ...c,
+              replies: updateCommentInList(c.replies)
+            }
+          }
+          return c
+        })
+      }
+
+      setPostComments({
+        ...postComments,
+        [postId]: updateCommentInList(postComments[postId] || [])
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to toggle comment like")
+    }
+  }
+
+  const loadReplies = async (postId: string, commentId: string) => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      const { data: repliesData, error: repliesError } = await supabase
+        .from("comments")
+        .select("*")
+        .eq("parent_comment_id", commentId)
+        .order("created_at", { ascending: true })
+
+      if (repliesError) throw repliesError
+
+      // Fetch user's liked replies
+      if (user && repliesData && repliesData.length > 0) {
+        const replyIds = repliesData.map(r => r.id)
+        const { data: likesData } = await supabase
+          .from("comment_likes")
+          .select("comment_id")
+          .eq("user_id", user.id)
+          .in("comment_id", replyIds)
+
+        const likedIds = new Set(likesData?.map(l => l.comment_id) || [])
+        setLikedComments(prev => new Set([...prev, ...likedIds]))
+      }
+
+      if (repliesData && repliesData.length > 0) {
+        const userIds = [...new Set(repliesData.map(r => r.user_id))]
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, username, avatar_url")
+          .in("id", userIds)
+
+        const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || [])
+
+        const enrichedReplies = repliesData.map(reply => ({
+          ...reply,
+          profiles: profilesMap.get(reply.user_id)
+        }))
+
+        setPostComments({
+          ...postComments,
+          [postId]: postComments[postId].map(c =>
+            c.id === commentId
+              ? { ...c, replies: enrichedReplies }
+              : c
+          )
+        })
+      }
+    } catch (err) {
+      console.error("Failed to load replies:", err)
     }
   }
 
@@ -1073,28 +1289,63 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                     rows={3}
                   />
                 </div>
+                {imagePreview && selectedImage && (
+                  <div className="relative">
+                    {selectedImage.type.startsWith('video/') ? (
+                      <video src={imagePreview} controls className="max-h-48 rounded-lg w-full" />
+                    ) : (
+                      <img src={imagePreview} alt="Preview" className="max-h-48 rounded-lg object-cover" />
+                    )}
+                    <button
+                      onClick={() => {
+                        setSelectedImage(null)
+                        setImagePreview(null)
+                      }}
+                      className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
                 <div className="flex justify-between items-center gap-2">
                   <label className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors">
                     <svg className="w-4 h-4 sm:w-5 sm:h-5 text-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                     </svg>
-                    <span className="text-xs sm:text-sm text-foreground/70">Add Photo</span>
+                    <span className="text-xs sm:text-sm text-foreground/70">Add Attachments</span>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,video/*"
                       className="hidden"
                       onChange={(e) => {
                         if (e.target.files && e.target.files[0]) {
-                          addPost(e.target.files[0])
-                          e.target.value = ''
+                          const file = e.target.files[0]
+                          const maxSize = 50 * 1024 * 1024 // 50MB limit
+
+                          if (file.size > maxSize) {
+                            setError("File size must be less than 50MB")
+                            e.target.value = ''
+                            return
+                          }
+
+                          setSelectedImage(file)
+                          const reader = new FileReader()
+                          reader.onloadend = () => {
+                            setImagePreview(reader.result as string)
+                          }
+                          reader.readAsDataURL(file)
                         }
                       }}
                       disabled={uploadingImage}
                     />
                   </label>
                   <button
-                    onClick={() => addPost()}
-                    disabled={uploadingImage}
+                    onClick={async () => {
+                      await addPost(selectedImage || undefined)
+                    }}
+                    disabled={uploadingImage || (!newPost.trim() && !selectedImage)}
                     className="px-4 py-1.5 sm:px-6 sm:py-2 text-sm sm:text-base rounded-lg font-semibold transition-all hover-lift disabled:opacity-50"
                     style={{
                       backgroundColor: "var(--primary)",
@@ -1129,7 +1380,14 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                   }}
                 >
                   <div className="flex gap-3 sm:gap-4 mb-3 sm:mb-4">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <div
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => {
+                        if (!isOwnProfile && onUserClick) {
+                          onUserClick(profile.username)
+                        }
+                      }}
+                    >
                       {profile.avatar_url ? (
                         <img
                           src={profile.avatar_url}
@@ -1145,7 +1403,14 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="font-bold text-foreground text-sm sm:text-base truncate">@{profile.username}</p>
+                          <p
+                            className="font-bold text-foreground text-sm sm:text-base truncate cursor-pointer hover:text-primary transition-colors"
+                            onClick={() => {
+                              if (!isOwnProfile && onUserClick) {
+                                onUserClick(profile.username)
+                              }
+                            }}
+                          >@{profile.username}</p>
                           <p className="text-xs sm:text-sm text-foreground/60">
                             {new Date(post.created_at).toLocaleDateString()}
                             {post.updated_at && post.updated_at !== post.created_at && (
@@ -1226,11 +1491,20 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                       <p className="text-foreground/80 mb-4">{post.content}</p>
                       {post.image_url && (
                         <div className="mb-4 rounded-lg overflow-hidden">
-                          <img 
-                            src={post.image_url} 
-                            alt="Post image" 
-                            className="w-full h-auto object-cover max-h-96"
-                          />
+                          {post.image_url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                            <video
+                              src={post.image_url}
+                              controls
+                              className="w-full max-h-96 object-contain bg-black"
+                            />
+                          ) : (
+                            <img
+                              src={post.image_url}
+                              alt="Post media"
+                              className="w-full h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => setModalImage(post.image_url!)}
+                            />
+                          )}
                         </div>
                       )}
                     </>
@@ -1240,19 +1514,39 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                   <div className="flex gap-6 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
                     <button
                       onClick={() => toggleLike(post.id)}
-                      className={`flex items-center gap-2 transition-colors ${
-                        post.user_liked ? 'text-red-500' : 'text-foreground/60 hover:text-red-500'
-                      }`}
+                      className={`flex items-center gap-2 transition-all group ${post.user_liked ? 'text-red-500' : 'text-foreground/60 hover:text-red-400'
+                        }`}
                     >
-                      <span>{post.user_liked ? '❤️' : '🤍'}</span>
-                      <span className="text-sm">{post.likes_count}</span>
+                      <svg
+                        className={`w-5 h-5 transition-all duration-300 ${post.user_liked
+                          ? 'fill-red-500 scale-110'
+                          : 'fill-none stroke-current group-hover:fill-red-400/20 group-hover:scale-110'
+                          }`}
+                        viewBox="0 0 24 24"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                      </svg>
+                      <span className="text-sm font-semibold">{post.likes_count}</span>
                     </button>
                     <button
                       onClick={() => toggleComments(post.id)}
-                      className="flex items-center gap-2 text-foreground/60 hover:text-primary transition-colors"
+                      className="flex items-center gap-2 text-foreground/60 hover:text-primary transition-all group"
                     >
-                      <span>💬</span>
-                      <span className="text-sm">{post.comments_count}</span>
+                      <svg
+                        className="w-5 h-5 transition-all duration-300 group-hover:scale-110"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                      <span className="text-sm font-semibold">{post.comments_count}</span>
                     </button>
                   </div>
 
@@ -1307,31 +1601,212 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                       {/* Comments List */}
                       <div className="space-y-3">
                         {postComments[post.id]?.map((comment: any) => (
-                          <div key={comment.id} className="flex gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0">
-                              {comment.profiles?.avatar_url ? (
-                                <img
-                                  src={comment.profiles.avatar_url}
-                                  alt={comment.profiles.username}
-                                  className="w-full h-full rounded-full object-cover"
-                                />
-                              ) : (
-                                <span className="font-bold text-primary-foreground text-xs">
-                                  {comment.profiles?.username?.slice(0, 2).toUpperCase()}
-                                </span>
-                              )}
-                            </div>
-                            <div
-                              className="flex-1 px-4 py-2 rounded-lg"
-                              style={{ backgroundColor: "var(--secondary)" }}
-                            >
-                              <p className="font-semibold text-sm text-foreground">
-                                @{comment.profiles?.username}
-                              </p>
-                              <p className="text-foreground/80 text-sm">{comment.content}</p>
-                              <p className="text-xs text-foreground/40 mt-1">
-                                {new Date(comment.created_at).toLocaleString()}
-                              </p>
+                          <div key={comment.id} className="space-y-2">
+                            <div className="flex gap-3">
+                              <div
+                                className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => {
+                                  if (onUserClick && comment.profiles?.username) {
+                                    onUserClick(comment.profiles.username)
+                                  }
+                                }}
+                              >
+                                {comment.profiles?.avatar_url ? (
+                                  <img
+                                    src={comment.profiles.avatar_url}
+                                    alt={comment.profiles.username}
+                                    className="w-full h-full rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="font-bold text-primary-foreground text-xs">
+                                    {comment.profiles?.username?.slice(0, 2).toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div
+                                  className="px-4 py-2 rounded-lg"
+                                  style={{ backgroundColor: "var(--secondary)" }}
+                                >
+                                  <p
+                                    className="font-semibold text-sm text-foreground cursor-pointer hover:text-primary transition-colors"
+                                    onClick={() => {
+                                      if (onUserClick && comment.profiles?.username) {
+                                        onUserClick(comment.profiles.username)
+                                      }
+                                    }}
+                                  >
+                                    @{comment.profiles?.username}
+                                  </p>
+                                  <p className="text-foreground/80 text-sm">{comment.content}</p>
+                                  <div className="flex items-center gap-3 mt-1">
+                                    <p className="text-xs text-foreground/40">
+                                      {new Date(comment.created_at).toLocaleString()}
+                                    </p>
+                                    <button
+                                      onClick={async () => {
+                                        if (replyingTo === comment.id) {
+                                          setReplyingTo(null)
+                                          setReplyContent("")
+                                        } else {
+                                          setReplyingTo(comment.id)
+                                          if (!comment.replies) {
+                                            await loadReplies(post.id, comment.id)
+                                          }
+                                        }
+                                      }}
+                                      className="text-xs text-primary hover:underline"
+                                    >
+                                      Reply
+                                    </button>
+                                    <button
+                                      onClick={() => toggleCommentLike(comment.id, post.id)}
+                                      className={`flex items-center gap-1 text-xs transition-all ${likedComments.has(comment.id) ? 'text-red-500' : 'text-foreground/40 hover:text-red-400'
+                                        }`}
+                                    >
+                                      <svg
+                                        className={`w-3 h-3 transition-all ${likedComments.has(comment.id) ? 'fill-red-500' : 'fill-none stroke-current'
+                                          }`}
+                                        viewBox="0 0 24 24"
+                                        strokeWidth="2"
+                                      >
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                      </svg>
+                                      <span>{comment.likes_count || 0}</span>
+                                    </button>
+                                    {isOwnProfile && (
+                                      <button
+                                        onClick={() => deleteComment(post.id, comment.id)}
+                                        className="text-foreground/40 hover:text-red-500 transition-colors"
+                                        title="Delete comment"
+                                      >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Reply Input */}
+                                {replyingTo === comment.id && (
+                                  <div className="flex gap-2 mt-2">
+                                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0">
+                                      {profile.avatar_url ? (
+                                        <img
+                                          src={profile.avatar_url}
+                                          alt={profile.username}
+                                          className="w-full h-full rounded-full object-cover"
+                                        />
+                                      ) : (
+                                        <span className="font-bold text-primary-foreground text-[10px]">
+                                          {profile.username.slice(0, 2).toUpperCase()}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <input
+                                      type="text"
+                                      value={replyContent}
+                                      onChange={(e) => setReplyContent(e.target.value)}
+                                      placeholder={`Reply to @${comment.profiles?.username}...`}
+                                      className="flex-1 px-3 py-2 text-sm rounded-lg text-foreground focus:outline-none transition-all"
+                                      style={{
+                                        backgroundColor: "var(--input)",
+                                        border: "1px solid var(--border)",
+                                      }}
+                                      onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                          addComment(post.id, comment.id)
+                                        }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() => addComment(post.id, comment.id)}
+                                      className="px-3 py-2 text-sm rounded-lg font-semibold transition-all hover-lift"
+                                      style={{
+                                        backgroundColor: "var(--primary)",
+                                        color: "var(--primary-foreground)",
+                                      }}
+                                    >
+                                      Reply
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setReplyingTo(null)
+                                        setReplyContent("")
+                                      }}
+                                      className="px-3 py-2 text-sm rounded-lg transition-all"
+                                      style={{ border: "1px solid var(--border)" }}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                )}
+
+                                {/* Nested Replies */}
+                                {comment.replies && comment.replies.length > 0 && (
+                                  <div className="ml-6 mt-2 space-y-2">
+                                    {comment.replies.map((reply: any) => (
+                                      <div key={reply.id} className="flex gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0">
+                                          {reply.profiles?.avatar_url ? (
+                                            <img
+                                              src={reply.profiles.avatar_url}
+                                              alt={reply.profiles.username}
+                                              className="w-full h-full rounded-full object-cover"
+                                            />
+                                          ) : (
+                                            <span className="font-bold text-primary-foreground text-[10px]">
+                                              {reply.profiles?.username?.slice(0, 2).toUpperCase()}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div
+                                          className="flex-1 px-3 py-2 rounded-lg"
+                                          style={{ backgroundColor: "var(--muted)" }}
+                                        >
+                                          <p className="font-semibold text-xs text-foreground">
+                                            @{reply.profiles?.username}
+                                          </p>
+                                          <p className="text-foreground/80 text-xs">{reply.content}</p>
+                                          <div className="flex items-center gap-2 mt-1">
+                                            <p className="text-[10px] text-foreground/40">
+                                              {new Date(reply.created_at).toLocaleString()}
+                                            </p>
+                                            <button
+                                              onClick={() => toggleCommentLike(reply.id, post.id)}
+                                              className={`flex items-center gap-1 text-[10px] transition-all ${likedComments.has(reply.id) ? 'text-red-500' : 'text-foreground/40 hover:text-red-400'
+                                                }`}
+                                            >
+                                              <svg
+                                                className={`w-2.5 h-2.5 transition-all ${likedComments.has(reply.id) ? 'fill-red-500' : 'fill-none stroke-current'
+                                                  }`}
+                                                viewBox="0 0 24 24"
+                                                strokeWidth="2"
+                                              >
+                                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                              </svg>
+                                              <span>{reply.likes_count || 0}</span>
+                                            </button>
+                                            {isOwnProfile && (
+                                              <button
+                                                onClick={() => deleteComment(post.id, reply.id, comment.id)}
+                                                className="text-foreground/40 hover:text-red-500 transition-colors"
+                                                title="Delete reply"
+                                              >
+                                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -1349,6 +1824,61 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      {modalImage && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setModalImage(null)
+            setImageZoom(1)
+          }}
+        >
+          <button
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            onClick={() => {
+              setModalImage(null)
+              setImageZoom(1)
+            }}
+          >
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 bg-black/60 rounded-lg px-4 py-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setImageZoom(Math.max(0.5, imageZoom - 0.25))
+              }}
+              className="text-white hover:text-gray-300 px-3 py-1 rounded"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+              </svg>
+            </button>
+            <span className="text-white px-2">{Math.round(imageZoom * 100)}%</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setImageZoom(Math.min(3, imageZoom + 0.25))
+              }}
+              className="text-white hover:text-gray-300 px-3 py-1 rounded"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+              </svg>
+            </button>
+          </div>
+          <img
+            src={modalImage}
+            alt="Full size"
+            className="max-w-full max-h-full object-contain"
+            style={{ transform: `scale(${imageZoom})`, transition: 'transform 0.2s' }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </section>
   )
 }

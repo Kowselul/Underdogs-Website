@@ -41,6 +41,17 @@ export default function Register({ onSwitchToLogin, onRegisterSuccess }: Registe
     setIsLoading(true)
 
     try {
+      // Check if username already exists (case-insensitive)
+      const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('username')
+        .ilike('username', formData.username)
+        .single()
+
+      if (existingUser && !checkError) {
+        throw new Error("Username already taken")
+      }
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -53,7 +64,7 @@ export default function Register({ onSwitchToLogin, onRegisterSuccess }: Registe
       })
 
       if (signUpError) throw signUpError
-      
+
       if (data.user) {
         // Wait for profile to be created by trigger
         await new Promise(resolve => setTimeout(resolve, 500))

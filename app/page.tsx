@@ -13,7 +13,12 @@ import SearchResults from "@/components/search-results"
 import Footer from "@/components/footer"
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState("home")
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("activeTab") || "home"
+    }
+    return "home"
+  })
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
@@ -25,8 +30,20 @@ export default function Home() {
   const [username, setUsername] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [viewingUsername, setViewingUsername] = useState<string | null>(null)
-  
+
   const supabase = useMemo(() => createClient(), [])
+
+  // Check URL parameters on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      const userParam = params.get('user')
+      if (userParam) {
+        setViewingUsername(userParam)
+        setActiveTab("profile")
+      }
+    }
+  }, [])
 
   // Apply dark mode on mount
   useEffect(() => {
@@ -37,10 +54,12 @@ export default function Home() {
     }
   }, [isDarkMode])
 
-  // Reset to home tab when returning to the site
+  // Save activeTab to localStorage whenever it changes
   useEffect(() => {
-    setActiveTab("home")
-  }, [])
+    if (typeof window !== "undefined") {
+      localStorage.setItem("activeTab", activeTab)
+    }
+  }, [activeTab])
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -53,12 +72,12 @@ export default function Home() {
 
       try {
         console.log("Checking auth...")
-        
+
         // First check if there's a session in storage
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        
+
         console.log("Session:", session, "Error:", sessionError)
-        
+
         if (sessionError) {
           console.error("Error getting session:", sessionError)
           clearTimeout(timeoutId)
@@ -124,17 +143,17 @@ export default function Home() {
       console.log("handleLogin called")
       // Wait a bit for auth state to propagate
       await new Promise(resolve => setTimeout(resolve, 500))
-      
+
       // Re-check auth to get latest user data
       const { data: { user }, error } = await supabase.auth.getUser()
-      
+
       console.log("After login - User:", user, "Error:", error)
-      
+
       if (error) {
         console.error("Error getting user after login:", error)
         return
       }
-      
+
       if (user) {
         console.log("User found, fetching profile...")
         const { data: profile, error: profileError } = await supabase
@@ -142,9 +161,9 @@ export default function Home() {
           .select("username")
           .eq("id", user.id)
           .single()
-        
+
         console.log("Profile:", profile, "Error:", profileError)
-        
+
         if (profile) {
           setUsername(profile.username)
         }
@@ -187,11 +206,20 @@ export default function Home() {
   const handleUserClick = (username: string) => {
     setViewingUsername(username)
     setActiveTab("profile")
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // Update URL with the username parameter
+    const url = new URL(window.location.href)
+    url.searchParams.set('user', username)
+    window.history.pushState({}, '', url)
   }
 
   const handleProfileClick = () => {
     setViewingUsername(null)
     setActiveTab("profile")
+    // Remove user parameter from URL when viewing own profile
+    const url = new URL(window.location.href)
+    url.searchParams.delete('user')
+    window.history.pushState({}, '', url)
   }
 
   if (loading) {
@@ -226,8 +254,8 @@ export default function Home() {
       {activeTab === "register" && (
         <Register onSwitchToLogin={() => setActiveTab("login")} onRegisterSuccess={handleLogin} />
       )}
-      {activeTab === "profile" && isLoggedIn && <Profile key="profile" activeTab={activeTab} setActiveTab={setActiveTab} viewingUsername={viewingUsername} />}
-      {activeTab === "settings" && isLoggedIn && <Profile key="settings" activeTab={activeTab} setActiveTab={setActiveTab} />}
+      {activeTab === "profile" && isLoggedIn && <Profile key="profile" activeTab={activeTab} setActiveTab={setActiveTab} viewingUsername={viewingUsername} onUserClick={handleUserClick} />}
+      {activeTab === "settings" && isLoggedIn && <Profile key="settings" activeTab={activeTab} setActiveTab={setActiveTab} onUserClick={handleUserClick} />}
 
       {(activeTab === "profile" || activeTab === "settings") && !isLoggedIn && (
         <div className="flex items-center justify-center min-h-screen">

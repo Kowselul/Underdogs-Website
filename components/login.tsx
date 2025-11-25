@@ -28,11 +28,11 @@ export default function Login({ onSwitchToRegister, onLoginSuccess }: LoginProps
 
       // Check if input is a username (doesn't contain @)
       if (!emailOrUsername.includes('@')) {
-        // Fetch email from username
+        // Fetch email from username (case-insensitive)
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('email')
-          .eq('username', emailOrUsername)
+          .ilike('username', emailOrUsername)
           .single()
 
         if (profileError || !profileData) {
@@ -48,7 +48,7 @@ export default function Login({ onSwitchToRegister, onLoginSuccess }: LoginProps
       })
 
       if (signInError) throw signInError
-      
+
       if (data.user) {
         console.log("Login successful, user:", data.user.id)
         // Call the success callback
