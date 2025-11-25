@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
+import AdminPanel from "./admin-panel"
 
 interface ProfileProps {
   activeTab?: string
@@ -35,6 +36,8 @@ interface Profile {
   discord_tag: string
   tiktok_url: string
   website_url: string
+  role?: string
+  is_admin?: boolean
 }
 
 export default function Profile({ activeTab = "profile", setActiveTab, viewingUsername, onUserClick }: ProfileProps) {
@@ -82,6 +85,8 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
     discord_tag: "",
     tiktok_url: "",
     website_url: "",
+    role: "user",
+    is_admin: false,
   })
 
   useEffect(() => {
@@ -889,6 +894,16 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                 </div>
               )}
             </div>
+
+            {/* Admin Panel - Only visible to admins */}
+            {profile.is_admin && (
+              <div
+                className="rounded-xl p-5 sm:p-8 animate-slideInLeft"
+                style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)", animationDelay: "0.15s" }}
+              >
+                <AdminPanel />
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -952,7 +967,19 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                 />
               </div>
               <div className="flex-1 w-full sm:w-auto text-center sm:text-left">
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2">@{profile.username}</h1>
+                <div className="flex items-center gap-3 justify-center sm:justify-start mb-2">
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">@{profile.username}</h1>
+                  {profile.role === 'member' && (
+                    <span className="px-3 py-1 text-xs sm:text-sm font-semibold rounded-full bg-blue-500/20 text-blue-500 border border-blue-500/30">
+                      Underdogs Member
+                    </span>
+                  )}
+                  {profile.role === 'head' && (
+                    <span className="px-3 py-1 text-xs sm:text-sm font-semibold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg">
+                      Underdogs Head
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm sm:text-base lg:text-lg text-foreground/70 mb-4">{profile.bio}</p>
 
                 {/* Social Links */}
