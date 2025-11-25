@@ -21,6 +21,7 @@ export default function Settings({ setActiveTab, onUserClick }: SettingsProps) {
     const [activeSettingsTab, setActiveSettingsTab] = useState<"account" | "admin">("account")
     const [profile, setProfile] = useState<Profile>({ username: "", email: "", is_admin: false })
     const [passwords, setPasswords] = useState({
+        currentPassword: "",
         newPassword: "",
         confirmPassword: "",
     })
@@ -28,6 +29,8 @@ export default function Settings({ setActiveTab, onUserClick }: SettingsProps) {
     const [error, setError] = useState<string | null>(null)
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const [showPasswordForm, setShowPasswordForm] = useState(false)
+    const [newEmail, setNewEmail] = useState("")
+    const [passwordError, setPasswordError] = useState<string | null>(null)
 
     useEffect(() => {
         fetchUserData()
@@ -70,41 +73,110 @@ export default function Settings({ setActiveTab, onUserClick }: SettingsProps) {
     }
 
     const updatePassword = async () => {
+        if (!passwords.currentPassword) {
+            setPasswordError("Current password is required")
+            setTimeout(() => setPasswordError(null), 3000)
+            return
+        }
+
         if (passwords.newPassword !== passwords.confirmPassword) {
-            setError("Passwords do not match")
+            setPasswordError("New passwords do not match")
+            setTimeout(() => setPasswordError(null), 3000)
+            return
+        }
+
+        if (passwords.newPassword.length < 6) {
+            setPasswordError("New password must be at least 6 characters long")
+            setTimeout(() => setPasswordError(null), 3000)
             return
         }
 
         try {
-            const { error: updateError } = await supabase.auth.updateUser({
-                password: passwords.newPassword,
+            setPasswordError(null)
+            setSuccessMessage(null)
+
+            // Get the current user's session token
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) {
+                throw new Error("Not authenticated")
+            }
+
+            // Call our API route to change the password
+            const response = await fetch('/api/user/update-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    currentPassword: passwords.currentPassword,
+                    newPassword: passwords.newPassword
+                })
             })
 
-            if (updateError) throw updateError
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to update password')
+            }
 
             setSuccessMessage("Password updated successfully!")
-            setPasswords({ newPassword: "", confirmPassword: "" })
+            setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" })
             setShowPasswordForm(false)
+
+            // Scroll to top to show success message
+            window.scrollTo({ top: 0, behavior: 'smooth' })
 
             setTimeout(() => setSuccessMessage(null), 3000)
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to update password")
+            setPasswordError(err instanceof Error ? err.message : "Failed to update password")
+            setTimeout(() => setPasswordError(null), 5000)
         }
     }
 
     const updateEmail = async () => {
+        if (!newEmail || newEmail.trim() === "") {
+            setError("Email cannot be empty")
+            setTimeout(() => setError(null), 3000)
+            return
+        }
+
         try {
-            const { error: updateError } = await supabase.auth.updateUser({
-                email: profile.email,
+            setError(null)
+            setSuccessMessage(null)
+
+            // Get the current user's session token
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) {
+                throw new Error("Not authenticated")
+            }
+
+            // Call our API route to change the email without confirmation
+            const response = await fetch('/api/user/update-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    newEmail
+                })
             })
 
-            if (updateError) throw updateError
+            const data = await response.json()
 
-            setSuccessMessage("Email update requested! Please check your new email for confirmation.")
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to update email')
+            }
+
+            setSuccessMessage("Email updated successfully!")
+            setProfile({ ...profile, email: newEmail })
+            setNewEmail("")
 
             setTimeout(() => setSuccessMessage(null), 5000)
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to update email")
+            setTimeout(() => setError(null), 5000)
         }
     }
 
@@ -140,8 +212,8 @@ export default function Settings({ setActiveTab, onUserClick }: SettingsProps) {
                         <button
                             onClick={() => setActiveSettingsTab("account")}
                             className={`px-6 py-3 font-semibold transition-colors relative ${activeSettingsTab === "account"
-                                    ? "text-primary"
-                                    : "text-foreground/60 hover:text-foreground"
+                                ? "text-primary"
+                                : "text-foreground/60 hover:text-foreground"
                                 }`}
                         >
                             Account Settings
@@ -153,8 +225,8 @@ export default function Settings({ setActiveTab, onUserClick }: SettingsProps) {
                             <button
                                 onClick={() => setActiveSettingsTab("admin")}
                                 className={`px-6 py-3 font-semibold transition-colors relative ${activeSettingsTab === "admin"
-                                        ? "text-primary"
-                                        : "text-foreground/60 hover:text-foreground"
+                                    ? "text-primary"
+                                    : "text-foreground/60 hover:text-foreground"
                                     }`}
                             >
                                 Admin Panel
@@ -202,8 +274,8 @@ export default function Settings({ setActiveTab, onUserClick }: SettingsProps) {
                                         <input
                                             type="email"
                                             placeholder="new.email@example.com"
-                                            value={profile.email}
-                                            onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                                            value={newEmail}
+                                            onChange={(e) => setNewEmail(e.target.value)}
                                             className="w-full px-4 py-3 rounded-lg text-foreground focus:outline-none focus:ring-2 transition-all"
                                             style={{ border: "1px solid var(--border)", backgroundColor: "var(--input)" }}
                                         />
@@ -237,6 +309,23 @@ export default function Settings({ setActiveTab, onUserClick }: SettingsProps) {
 
                                 {showPasswordForm && (
                                     <div className="space-y-4 pt-6" style={{ borderTop: "1px solid var(--border)" }}>
+                                        {passwordError && (
+                                            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 text-sm">
+                                                {passwordError}
+                                            </div>
+                                        )}
+                                        <div className="space-y-2">
+                                            <label className="block text-sm font-semibold text-foreground">Current Password</label>
+                                            <input
+                                                type="password"
+                                                name="currentPassword"
+                                                value={passwords.currentPassword}
+                                                onChange={handlePasswordChange}
+                                                placeholder="••••••••"
+                                                className="w-full px-4 py-3 rounded-lg text-foreground focus:outline-none focus:ring-2 transition-all"
+                                                style={{ border: "1px solid var(--border)", backgroundColor: "var(--input)" }}
+                                            />
+                                        </div>
                                         <div className="space-y-2">
                                             <label className="block text-sm font-semibold text-foreground">New Password</label>
                                             <input

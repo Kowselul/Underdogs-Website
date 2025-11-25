@@ -40,14 +40,35 @@ export default function Home() {
 
   const supabase = useMemo(() => createClient(), [])
 
-  // Check URL parameters on mount
+  // Check URL parameters on mount and restore state from URL
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const pathname = window.location.pathname
       const params = new URLSearchParams(window.location.search)
       const userParam = params.get('user')
-      if (userParam) {
-        setViewingUsername(userParam)
-        setActiveTab("profile")
+
+      // Restore activeTab from URL pathname
+      if (pathname === '/profile') {
+        setActiveTab('profile')
+        if (userParam) {
+          setViewingUsername(userParam)
+        }
+      } else if (pathname === '/members') {
+        setActiveTab('members')
+      } else if (pathname === '/education') {
+        setActiveTab('education')
+      } else if (pathname === '/search') {
+        setActiveTab('search')
+      } else if (pathname === '/settings') {
+        setActiveTab('settings')
+      } else if (pathname === '/edit-profile') {
+        setActiveTab('edit-profile')
+      } else if (pathname === '/login') {
+        setActiveTab('login')
+      } else if (pathname === '/register') {
+        setActiveTab('register')
+      } else if (pathname === '/') {
+        setActiveTab('home')
       }
     }
   }, [])
@@ -81,17 +102,21 @@ export default function Home() {
         // Clear everything for home
         url.searchParams.delete('user')
         url.pathname = '/'
-      } else if (activeTab === "login" || activeTab === "register") {
-        // Don't show login/register in URL
+      } else if (activeTab === "login") {
+        // Show login in URL
         url.searchParams.delete('user')
-        url.pathname = '/'
+        url.pathname = '/login'
+      } else if (activeTab === "register") {
+        // Show register in URL
+        url.searchParams.delete('user')
+        url.pathname = '/register'
       } else {
         // Other tabs (members, education, search, settings, edit-profile)
         url.searchParams.delete('user')
         url.pathname = `/${activeTab}`
       }
 
-      window.history.pushState({}, '', url)
+      window.history.replaceState({}, '', url)
 
       // Clear viewingUsername when navigating away from profile
       if (activeTab !== "profile" && viewingUsername) {

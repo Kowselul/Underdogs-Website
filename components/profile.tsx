@@ -667,12 +667,12 @@ export default function Profile({ setActiveTab, viewingUsername, onUserClick }: 
                 <div className="flex items-center gap-3 justify-center sm:justify-start mb-2">
                   <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">@{profile.username}</h1>
                   {profile.role === 'member' && (
-                    <span className="px-3 py-1 text-xs sm:text-sm font-semibold rounded-full bg-blue-500/20 text-blue-500 border border-blue-500/30">
+                    <span className="px-3 py-1 text-xs sm:text-sm font-semibold rounded-full bg-primary/20 text-primary border border-primary/30">
                       Underdogs Member
                     </span>
                   )}
                   {profile.role === 'head' && (
-                    <span className="px-3 py-1 text-xs sm:text-sm font-semibold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg">
+                    <span className="px-3 py-1 text-xs sm:text-sm font-semibold rounded-full bg-primary text-primary-foreground shadow-lg">
                       Underdogs Head
                     </span>
                   )}

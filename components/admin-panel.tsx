@@ -27,6 +27,8 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
   const [currentUsername, setCurrentUsername] = useState<string | null>(null)
   const isOwner = currentUsername?.toLowerCase() === 'kowse'
+  const [passwordChangeUserId, setPasswordChangeUserId] = useState<string | null>(null)
+  const [newPassword, setNewPassword] = useState("")
 
   useEffect(() => {
     fetchUsers()
@@ -119,6 +121,55 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
     }
   }
 
+  const changeUserPassword = async (userId: string) => {
+    if (!newPassword || newPassword.length < 6) {
+      setError("Password must be at least 6 characters long")
+      setTimeout(() => setError(null), 3000)
+      return
+    }
+
+    try {
+      setUpdatingUserId(userId)
+      setError(null)
+      setSuccessMessage(null)
+
+      // Get the current user's session token
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        throw new Error("Not authenticated")
+      }
+
+      // Call our API route to change the password
+      const response = await fetch('/api/admin/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          userId,
+          newPassword
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to change password')
+      }
+
+      setSuccessMessage("Password changed successfully!")
+      setPasswordChangeUserId(null)
+      setNewPassword("")
+
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to change password")
+    } finally {
+      setUpdatingUserId(null)
+    }
+  }
+
   const filteredUsers = users.filter(user =>
     user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -180,7 +231,8 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
                 {isOwner && <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Email</th>}
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Role</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Admin</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Change Role</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Password</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -209,9 +261,9 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
                   <td className="px-6 py-4">
                     <span
                       className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${user.role === 'head'
-                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white'
+                        ? 'bg-primary text-primary-foreground'
                         : user.role === 'member'
-                          ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30'
+                          ? 'bg-primary/20 text-primary border border-primary/30'
                           : 'bg-gray-500/20 text-gray-500 border border-gray-500/30'
                         }`}
                     >
@@ -229,16 +281,58 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
                     />
                   </td>
                   <td className="px-6 py-4">
-                    <select
-                      value={user.role}
-                      onChange={(e) => updateUserRole(user.id, e.target.value)}
-                      disabled={updatingUserId === user.id}
-                      className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="user">User</option>
-                      <option value="member">Member</option>
-                      <option value="head">Head</option>
-                    </select>
+                    <div className="flex justify-center">
+                      <select
+                        value={user.role}
+                        onChange={(e) => updateUserRole(user.id, e.target.value)}
+                        disabled={updatingUserId === user.id}
+                        className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="user">User</option>
+                        <option value="member">Member</option>
+                        <option value="head">Head</option>
+                      </select>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {passwordChangeUserId === user.id ? (
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="New password"
+                          className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                          disabled={updatingUserId === user.id}
+                        />
+                        <button
+                          onClick={() => changeUserPassword(user.id)}
+                          disabled={updatingUserId === user.id}
+                          className="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPasswordChangeUserId(null)
+                            setNewPassword("")
+                          }}
+                          disabled={updatingUserId === user.id}
+                          className="px-3 py-2 border border-border text-foreground rounded-lg text-sm font-semibold hover:bg-secondary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setPasswordChangeUserId(user.id)}
+                        disabled={!isOwner || updatingUserId === user.id}
+                        className="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={!isOwner ? "Only the owner can change passwords" : ""}
+                      >
+                        Change
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
