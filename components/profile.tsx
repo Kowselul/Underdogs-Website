@@ -3,7 +3,6 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import AdminPanel from "./admin-panel"
 
 interface ProfileProps {
   activeTab?: string
@@ -40,17 +39,14 @@ interface Profile {
   is_admin?: boolean
 }
 
-export default function Profile({ activeTab = "profile", setActiveTab, viewingUsername, onUserClick }: ProfileProps) {
+export default function Profile({ setActiveTab, viewingUsername, onUserClick }: ProfileProps) {
   const supabase = createClient()
 
-  const [isEditing, setIsEditing] = useState(false)
-  const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [posts, setPosts] = useState<Post[]>([])
   const [newPost, setNewPost] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [expandedPost, setExpandedPost] = useState<string | null>(null)
   const [newComment, setNewComment] = useState("")
   const [postComments, setPostComments] = useState<{ [key: string]: any[] }>({})
@@ -65,12 +61,6 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
   const [editPostContent, setEditPostContent] = useState("")
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-
-  const [passwords, setPasswords] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  })
 
   const [profile, setProfile] = useState<Profile>({
     username: "",
@@ -177,55 +167,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
     }
 
     fetchUserData()
-  }, [supabase, activeTab, viewingUsername])
-
-  const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      setUploadingAvatar(true)
-      setError(null)
-
-      if (!event.target.files || event.target.files.length === 0) {
-        return
-      }
-
-      const file = event.target.files[0]
-      const fileExt = file.name.split('.').pop()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) throw new Error("Not authenticated")
-
-      const fileName = `${user.id}-${Math.random()}.${fileExt}`
-      const filePath = `avatars/${fileName}`
-
-      // Upload image to Supabase Storage
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, {
-        upsert: true,
-      })
-
-      if (uploadError) throw uploadError
-
-      // Get public URL
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath)
-
-      // Update profile with new avatar URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: urlData.publicUrl })
-        .eq('id', user.id)
-
-      if (updateError) throw updateError
-
-      setProfile({ ...profile, avatar_url: urlData.publicUrl })
-      setSuccessMessage('Avatar updated successfully!')
-      setTimeout(() => setSuccessMessage(null), 3000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload avatar')
-    } finally {
-      setUploadingAvatar(false)
-    }
-  }
+  }, [supabase, viewingUsername])
 
   const addPost = async (imageFile?: File) => {
     if (!newPost.trim() && !imageFile) return
@@ -686,227 +628,11 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
     }
   }
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPasswords({
-      ...passwords,
-      [e.target.name]: e.target.value,
-    })
-  }
-
-  const updatePassword = async () => {
-    if (passwords.newPassword !== passwords.confirmPassword) {
-      setError("Passwords do not match")
-      return
-    }
-
-    try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: passwords.newPassword,
-      })
-
-      if (updateError) throw updateError
-
-      setSuccessMessage("Password updated successfully!")
-      setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" })
-      setShowPasswordForm(false)
-
-      setTimeout(() => setSuccessMessage(null), 3000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update password")
-    }
-  }
-
-  const updateEmail = async () => {
-    try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        email: profile.email,
-      })
-
-      if (updateError) throw updateError
-
-      setSuccessMessage("Email update confirmation sent to your new email!")
-      setTimeout(() => setSuccessMessage(null), 3000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update email")
-    }
-  }
-
-  const saveProfile = async () => {
-    try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser()
-      if (userError || !user) throw new Error("Not authenticated")
-
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          bio: profile.bio,
-          involio_profile_url: profile.involio_profile_url,
-          twitter_url: profile.twitter_url,
-          instagram_url: profile.instagram_url,
-          linkedin_url: profile.linkedin_url,
-          youtube_url: profile.youtube_url,
-          discord_tag: profile.discord_tag,
-          tiktok_url: profile.tiktok_url,
-          website_url: profile.website_url,
-        })
-        .eq("id", user.id)
-
-      if (updateError) throw updateError
-
-      setIsEditing(false)
-      setSuccessMessage("Profile updated successfully!")
-      setTimeout(() => setSuccessMessage(null), 3000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update profile")
-    }
-  }
-
   if (loading) {
     return (
       <section className="relative min-h-screen bg-background py-24 flex items-center justify-center">
         <div className="text-foreground text-center">
           <p>Loading profile...</p>
-        </div>
-      </section>
-    )
-  }
-
-  if (activeTab === "settings") {
-    return (
-      <section className="relative min-h-screen bg-background py-12 sm:py-24">
-        <div className="relative mx-auto max-w-2xl px-4 sm:px-6 animate-fadeInUp">
-          <button
-            onClick={() => setActiveTab?.("profile")}
-            className="mb-4 sm:mb-6 px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base text-foreground/70 hover:text-foreground transition-colors font-semibold"
-          >
-            ← Back to Profile
-          </button>
-
-          <div className="space-y-4 sm:space-y-6">
-            <div
-              className="rounded-xl p-5 sm:p-8"
-              style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)" }}
-            >
-              <h1 className="text-3xl font-bold text-foreground mb-2">Account Settings</h1>
-              <p className="text-foreground/60">Manage your account details and security</p>
-            </div>
-
-            {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 text-sm">{error}</div>
-            )}
-
-            {successMessage && (
-              <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-600 text-sm">
-                {successMessage}
-              </div>
-            )}
-
-            {/* Email Section */}
-            <div
-              className="rounded-xl p-5 sm:p-8 animate-slideInLeft"
-              style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)", animationDelay: "0.05s" }}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-bold text-foreground">Email</h2>
-                  <p className="text-foreground/60 text-sm">Update your email address</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-foreground">Current Email</label>
-                  <p className="px-4 py-3 rounded-lg text-foreground/70" style={{ backgroundColor: "var(--input)" }}>
-                    {profile.email}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-foreground">New Email</label>
-                  <input
-                    type="email"
-                    placeholder="new.email@example.com"
-                    value={profile.email}
-                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-foreground focus:outline-none focus:ring-2 transition-all"
-                    style={{ border: "1px solid var(--border)", backgroundColor: "var(--input)" }}
-                  />
-                </div>
-                <button
-                  onClick={updateEmail}
-                  className="w-full py-3 bg-black text-white font-bold rounded-lg hover:opacity-90 transition-all"
-                >
-                  Update Email
-                </button>
-              </div>
-            </div>
-
-            {/* Password Section */}
-            <div
-              className="rounded-xl p-5 sm:p-8 animate-slideInLeft"
-              style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)", animationDelay: "0.1s" }}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-bold text-foreground">Password</h2>
-                  <p className="text-foreground/60 text-sm">Change your password</p>
-                </div>
-                <button
-                  onClick={() => setShowPasswordForm(!showPasswordForm)}
-                  className="px-4 py-2 text-white font-semibold rounded-lg transition-colors bg-black hover:opacity-90"
-                >
-                  {showPasswordForm ? "Cancel" : "Change"}
-                </button>
-              </div>
-
-              {showPasswordForm && (
-                <div className="space-y-4 pt-6" style={{ borderTop: "1px solid var(--border)" }}>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-foreground">New Password</label>
-                    <input
-                      type="password"
-                      name="newPassword"
-                      value={passwords.newPassword}
-                      onChange={handlePasswordChange}
-                      placeholder="••••••••"
-                      className="w-full px-4 py-3 rounded-lg text-foreground focus:outline-none focus:ring-2 transition-all"
-                      style={{ border: "1px solid var(--border)", backgroundColor: "var(--input)" }}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-foreground">Confirm New Password</label>
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      value={passwords.confirmPassword}
-                      onChange={handlePasswordChange}
-                      placeholder="••••••••"
-                      className="w-full px-4 py-3 rounded-lg text-foreground focus:outline-none focus:ring-2 transition-all"
-                      style={{ border: "1px solid var(--border)", backgroundColor: "var(--input)" }}
-                    />
-                  </div>
-                  <button
-                    onClick={updatePassword}
-                    className="w-full py-3 bg-black text-white font-bold rounded-lg hover:opacity-90 transition-all"
-                  >
-                    Update Password
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Admin Panel - Only visible to admins */}
-            {profile.is_admin && (
-              <div
-                className="rounded-xl p-5 sm:p-8 animate-slideInLeft"
-                style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)", animationDelay: "0.15s" }}
-              >
-                <AdminPanel />
-              </div>
-            )}
-          </div>
         </div>
       </section>
     )
@@ -936,37 +662,6 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                     </span>
                   )}
                 </div>
-                <label
-                  htmlFor="avatar-upload"
-                  className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                >
-                  <div className="text-white text-center">
-                    {uploadingAvatar ? (
-                      <div className="text-xs sm:text-sm font-semibold">Uploading...</div>
-                    ) : (
-                      <>
-                        <svg className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                          />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <div className="text-xs font-semibold">Upload</div>
-                      </>
-                    )}
-                  </div>
-                </label>
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={uploadAvatar}
-                  disabled={uploadingAvatar}
-                  className="hidden"
-                />
               </div>
               <div className="flex-1 w-full sm:w-auto text-center sm:text-left">
                 <div className="flex items-center gap-3 justify-center sm:justify-start mb-2">
@@ -1101,14 +796,14 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
 
             {isOwnProfile && (
               <button
-                onClick={() => (isEditing ? saveProfile() : setIsEditing(true))}
+                onClick={() => setActiveTab?.("edit-profile")}
                 className="w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base rounded-lg font-semibold transition-all hover-lift flex-shrink-0 mt-2 sm:mt-0"
                 style={{
                   backgroundColor: "var(--primary)",
                   color: "var(--primary-foreground)",
                 }}
               >
-                {isEditing ? "Save Profile" : "Edit Profile"}
+                Edit Profile
               </button>
             )}
           </div>
@@ -1140,144 +835,11 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
             >
               <h3 className="text-lg font-bold text-foreground">About</h3>
               <div className="space-y-4">
-                {isEditing ? (
-                  <>
-                    <div>
-                      <label className="text-sm text-foreground/60 mb-2 block">Bio</label>
-                      <textarea
-                        value={profile.bio}
-                        onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                        placeholder="Tell us about yourself"
-                        className="w-full px-4 py-2 rounded-lg text-foreground focus:outline-none transition-all resize-none"
-                        style={{
-                          border: "1px solid var(--border)",
-                          backgroundColor: "var(--input)",
-                        }}
-                        rows={3}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-foreground/60 mb-2 block">Twitter URL</label>
-                      <input
-                        type="text"
-                        value={profile.twitter_url}
-                        onChange={(e) => setProfile({ ...profile, twitter_url: e.target.value })}
-                        placeholder="https://twitter.com/..."
-                        className="w-full px-4 py-2 rounded-lg text-foreground focus:outline-none transition-all"
-                        style={{
-                          border: "1px solid var(--border)",
-                          backgroundColor: "var(--input)",
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-foreground/60 mb-2 block">Involio Profile</label>
-                      <input
-                        type="text"
-                        value={profile.involio_profile_url}
-                        onChange={(e) => setProfile({ ...profile, involio_profile_url: e.target.value })}
-                        placeholder="https://involio.com/your-profile"
-                        className="w-full px-4 py-2 rounded-lg text-foreground focus:outline-none transition-all"
-                        style={{
-                          border: "1px solid var(--border)",
-                          backgroundColor: "var(--input)",
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-foreground/60 mb-2 block">Instagram URL</label>
-                      <input
-                        type="text"
-                        value={profile.instagram_url}
-                        onChange={(e) => setProfile({ ...profile, instagram_url: e.target.value })}
-                        placeholder="https://instagram.com/..."
-                        className="w-full px-4 py-2 rounded-lg text-foreground focus:outline-none transition-all"
-                        style={{
-                          border: "1px solid var(--border)",
-                          backgroundColor: "var(--input)",
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-foreground/60 mb-2 block">LinkedIn URL</label>
-                      <input
-                        type="text"
-                        value={profile.linkedin_url}
-                        onChange={(e) => setProfile({ ...profile, linkedin_url: e.target.value })}
-                        placeholder="https://linkedin.com/in/..."
-                        className="w-full px-4 py-2 rounded-lg text-foreground focus:outline-none transition-all"
-                        style={{
-                          border: "1px solid var(--border)",
-                          backgroundColor: "var(--input)",
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-foreground/60 mb-2 block">YouTube URL</label>
-                      <input
-                        type="text"
-                        value={profile.youtube_url}
-                        onChange={(e) => setProfile({ ...profile, youtube_url: e.target.value })}
-                        placeholder="https://youtube.com/..."
-                        className="w-full px-4 py-2 rounded-lg text-foreground focus:outline-none transition-all"
-                        style={{
-                          border: "1px solid var(--border)",
-                          backgroundColor: "var(--input)",
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-foreground/60 mb-2 block">Discord Tag</label>
-                      <input
-                        type="text"
-                        value={profile.discord_tag}
-                        onChange={(e) => setProfile({ ...profile, discord_tag: e.target.value })}
-                        placeholder="username#1234"
-                        className="w-full px-4 py-2 rounded-lg text-foreground focus:outline-none transition-all"
-                        style={{
-                          border: "1px solid var(--border)",
-                          backgroundColor: "var(--input)",
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-foreground/60 mb-2 block">TikTok URL</label>
-                      <input
-                        type="text"
-                        value={profile.tiktok_url}
-                        onChange={(e) => setProfile({ ...profile, tiktok_url: e.target.value })}
-                        placeholder="https://tiktok.com/@..."
-                        className="w-full px-4 py-2 rounded-lg text-foreground focus:outline-none transition-all"
-                        style={{
-                          border: "1px solid var(--border)",
-                          backgroundColor: "var(--input)",
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-foreground/60 mb-2 block">Website URL</label>
-                      <input
-                        type="text"
-                        value={profile.website_url}
-                        onChange={(e) => setProfile({ ...profile, website_url: e.target.value })}
-                        placeholder="https://yourwebsite.com"
-                        className="w-full px-4 py-2 rounded-lg text-foreground focus:outline-none transition-all"
-                        style={{
-                          border: "1px solid var(--border)",
-                          backgroundColor: "var(--input)",
-                        }}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {profile.bio && (
-                      <div>
-                        <p className="text-sm text-foreground/60 mb-2">Bio</p>
-                        <p className="text-foreground text-sm">{profile.bio}</p>
-                      </div>
-                    )}
-                  </>
+                {profile.bio && (
+                  <div>
+                    <p className="text-sm text-foreground/60 mb-2">Bio</p>
+                    <p className="text-foreground text-sm">{profile.bio}</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -1447,20 +1009,22 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                             )}
                           </p>
                         </div>
-                        {isOwnProfile && (
+                        {(isOwnProfile || profile.is_admin) && (
                           <div className="flex gap-2">
-                            <button
-                              onClick={() => {
-                                setEditingPostId(post.id)
-                                setEditPostContent(post.content)
-                              }}
-                              className="p-2 text-foreground/60 hover:text-primary transition-colors"
-                              title="Edit post"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </button>
+                            {isOwnProfile && (
+                              <button
+                                onClick={() => {
+                                  setEditingPostId(post.id)
+                                  setEditPostContent(post.content)
+                                }}
+                                className="p-2 text-foreground/60 hover:text-primary transition-colors"
+                                title="Edit post"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                            )}
                             <button
                               onClick={() => deletePost(post.id, post.image_url)}
                               className="p-2 text-foreground/60 hover:text-red-500 transition-colors"

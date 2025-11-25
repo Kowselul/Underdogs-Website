@@ -10,6 +10,8 @@ import Login from "@/components/login"
 import Register from "@/components/register"
 import Profile from "@/components/profile"
 import SearchResults from "@/components/search-results"
+import Settings from "@/components/settings"
+import EditProfile from "@/components/edit-profile"
 import Footer from "@/components/footer"
 
 export default function Home() {
@@ -67,14 +69,9 @@ export default function Home() {
   }, [activeTab])
 
   useEffect(() => {
-    const checkAuth = async () => {
-      // Set a timeout to prevent infinite loading
-      const timeoutId = setTimeout(() => {
-        console.log("Auth check timed out")
-        setLoading(false)
-        setIsLoggedIn(false)
-      }, 5000) // 5 second timeout
+    let timeoutId: NodeJS.Timeout
 
+    const checkAuth = async () => {
       try {
         console.log("Checking auth...")
 
@@ -85,7 +82,6 @@ export default function Home() {
 
         if (sessionError) {
           console.error("Error getting session:", sessionError)
-          clearTimeout(timeoutId)
           setIsLoggedIn(false)
           setLoading(false)
           return
@@ -110,12 +106,12 @@ export default function Home() {
         } else {
           setIsLoggedIn(false)
         }
+
+        console.log("Setting loading to false")
+        setLoading(false)
       } catch (err) {
         console.error("Auth check failed:", err)
         setIsLoggedIn(false)
-      } finally {
-        clearTimeout(timeoutId)
-        console.log("Setting loading to false")
         setLoading(false)
       }
     }
@@ -126,8 +122,16 @@ export default function Home() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event, session?.user)
+
+      // Clear any pending timeout when auth state changes
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+
       if (session?.user) {
         setIsLoggedIn(true)
+        setLoading(false)
+
         const { data: profile } = await supabase.from("profiles").select("username").eq("id", session.user.id).single()
 
         if (profile) {
@@ -136,10 +140,22 @@ export default function Home() {
       } else {
         setIsLoggedIn(false)
         setUsername("")
+        setLoading(false)
       }
     })
 
-    return () => subscription?.unsubscribe()
+    // Set a backup timeout only if loading takes too long
+    timeoutId = setTimeout(() => {
+      console.log("Auth check timed out - forcing loading to false")
+      setLoading(false)
+    }, 10000) // 10 second timeout as a safety net
+
+    return () => {
+      subscription?.unsubscribe()
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+    }
   }, [supabase])
 
   // Handle successful login
@@ -262,10 +278,11 @@ export default function Home() {
       {activeTab === "register" && (
         <Register onSwitchToLogin={() => setActiveTab("login")} onRegisterSuccess={handleLogin} />
       )}
-      {activeTab === "profile" && isLoggedIn && <Profile key="profile" activeTab={activeTab} setActiveTab={setActiveTab} viewingUsername={viewingUsername} onUserClick={handleUserClick} />}
-      {activeTab === "settings" && isLoggedIn && <Profile key="settings" activeTab={activeTab} setActiveTab={setActiveTab} onUserClick={handleUserClick} />}
+      {activeTab === "profile" && isLoggedIn && <Profile viewingUsername={viewingUsername} onUserClick={handleUserClick} setActiveTab={setActiveTab} />}
+      {activeTab === "settings" && isLoggedIn && <Settings setActiveTab={setActiveTab} onUserClick={handleUserClick} />}
+      {activeTab === "edit-profile" && isLoggedIn && <EditProfile setActiveTab={setActiveTab} />}
 
-      {(activeTab === "profile" || activeTab === "settings") && !isLoggedIn && (
+      {(activeTab === "profile" || activeTab === "settings" || activeTab === "edit-profile") && !isLoggedIn && (
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-foreground mb-4">Access Denied</h1>

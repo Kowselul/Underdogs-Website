@@ -10,9 +10,14 @@ interface User {
   email: string
   role: string
   avatar_url: string
+  is_admin: boolean
 }
 
-export default function AdminPanel() {
+interface AdminPanelProps {
+  onUserClick?: (username: string) => void
+}
+
+export default function AdminPanel({ onUserClick }: AdminPanelProps) {
   const supabase = createClient()
   const [users, setUsers] = useState<User[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -30,7 +35,7 @@ export default function AdminPanel() {
       setLoading(true)
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, username, email, role, avatar_url")
+        .select("id, username, email, role, avatar_url, is_admin")
         .order("username", { ascending: true })
 
       if (error) throw error
@@ -61,6 +66,30 @@ export default function AdminPanel() {
       setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update role")
+    } finally {
+      setUpdatingUserId(null)
+    }
+  }
+
+  const updateUserAdmin = async (userId: string, isAdmin: boolean) => {
+    try {
+      setUpdatingUserId(userId)
+      setError(null)
+      setSuccessMessage(null)
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_admin: isAdmin })
+        .eq("id", userId)
+
+      if (error) throw error
+
+      setSuccessMessage("Admin status updated successfully!")
+      setUsers(users.map(u => u.id === userId ? { ...u, is_admin: isAdmin } : u))
+
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update admin status")
     } finally {
       setUpdatingUserId(null)
     }
@@ -125,7 +154,8 @@ export default function AdminPanel() {
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">User</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Email</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Current Role</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Role</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Admin</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
               </tr>
             </thead>
@@ -149,14 +179,14 @@ export default function AdminPanel() {
                   <td className="px-6 py-4 text-foreground/70">{user.email}</td>
                   <td className="px-6 py-4">
                     <span
-                      className={`px-3 py-1 text-xs font-semibold rounded-full ${user.role === 'head'
-                          ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white'
-                          : user.role === 'member'
-                            ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30'
-                            : 'bg-gray-500/20 text-gray-500 border border-gray-500/30'
+                      className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${user.role === 'head'
+                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white'
+                        : user.role === 'member'
+                          ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30'
+                          : 'bg-gray-500/20 text-gray-500 border border-gray-500/30'
                         }`}
                     >
-                      {user.role === 'head' ? 'Underdogs Head' : user.role === 'member' ? 'Underdogs Member' : 'User'}
+                      {user.role === 'head' ? 'Head' : user.role === 'member' ? 'Member' : 'User'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -167,8 +197,8 @@ export default function AdminPanel() {
                       className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="user">User</option>
-                      <option value="member">Underdogs Member</option>
-                      <option value="head">Underdogs Head</option>
+                      <option value="member">Member</option>
+                      <option value="head">Head</option>
                     </select>
                   </td>
                 </tr>
