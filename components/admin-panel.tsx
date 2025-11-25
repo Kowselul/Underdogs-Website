@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 
 interface User {
@@ -27,7 +26,7 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
   const [currentUsername, setCurrentUsername] = useState<string | null>(null)
   const isOwner = currentUsername?.toLowerCase() === 'kowse'
-  const [passwordChangeUserId, setPasswordChangeUserId] = useState<string | null>(null)
+  const [managingUserId, setManagingUserId] = useState<string | null>(null)
   const [newPassword, setNewPassword] = useState("")
 
   useEffect(() => {
@@ -159,7 +158,6 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
       }
 
       setSuccessMessage("Password changed successfully!")
-      setPasswordChangeUserId(null)
       setNewPassword("")
 
       setTimeout(() => setSuccessMessage(null), 3000)
@@ -228,113 +226,129 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
             <thead className="bg-secondary">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">User</th>
-                {isOwner && <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Email</th>}
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Email</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Role</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Admin</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Change Role</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Password</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="bg-card hover:bg-secondary/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {user.avatar_url ? (
-                          <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-sm font-bold text-primary-foreground">
-                            {user.username.slice(0, 2).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => onUserClick?.(user.username)}
-                        className="font-medium text-foreground hover:text-primary transition-colors"
-                      >
-                        @{user.username}
-                      </button>
-                    </div>
-                  </td>
-                  {isOwner && <td className="px-6 py-4 text-foreground/70">{user.email}</td>}
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${user.role === 'head'
-                        ? 'bg-primary text-primary-foreground'
-                        : user.role === 'member'
-                          ? 'bg-primary/20 text-primary border border-primary/30'
-                          : 'bg-gray-500/20 text-gray-500 border border-gray-500/30'
-                        }`}
-                    >
-                      {user.role === 'head' ? 'Head' : user.role === 'member' ? 'Member' : 'User'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={user.is_admin}
-                      onChange={(e) => updateUserAdmin(user.id, e.target.checked)}
-                      disabled={!isOwner || updatingUserId === user.id}
-                      className="w-5 h-5 rounded border-border bg-background text-primary focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                      title={!isOwner ? "Only the owner can modify admin permissions" : ""}
-                    />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex justify-center">
-                      <select
-                        value={user.role}
-                        onChange={(e) => updateUserRole(user.id, e.target.value)}
-                        disabled={updatingUserId === user.id}
-                        className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="user">User</option>
-                        <option value="member">Member</option>
-                        <option value="head">Head</option>
-                      </select>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {passwordChangeUserId === user.id ? (
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="password"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          placeholder="New password"
-                          className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                          disabled={updatingUserId === user.id}
-                        />
+                <React.Fragment key={user.id}>
+                  <tr className="bg-card hover:bg-secondary/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {user.avatar_url ? (
+                            <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-sm font-bold text-primary-foreground">
+                              {user.username.slice(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
                         <button
-                          onClick={() => changeUserPassword(user.id)}
-                          disabled={updatingUserId === user.id}
-                          className="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => onUserClick?.(user.username)}
+                          className="font-medium text-foreground hover:text-primary transition-colors"
                         >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => {
-                            setPasswordChangeUserId(null)
-                            setNewPassword("")
-                          }}
-                          disabled={updatingUserId === user.id}
-                          className="px-3 py-2 border border-border text-foreground rounded-lg text-sm font-semibold hover:bg-secondary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Cancel
+                          @{user.username}
                         </button>
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => setPasswordChangeUserId(user.id)}
-                        disabled={!isOwner || updatingUserId === user.id}
-                        className="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={!isOwner ? "Only the owner can change passwords" : ""}
+                    </td>
+                    <td className="px-6 py-4 text-foreground/70">{user.email}</td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${user.role === 'head'
+                          ? 'bg-primary text-primary-foreground'
+                          : user.role === 'member'
+                            ? 'bg-primary/20 text-primary border border-primary/30'
+                            : 'bg-gray-500/20 text-gray-500 border border-gray-500/30'
+                          }`}
                       >
-                        Change
+                        {user.role === 'head' ? 'Head' : user.role === 'member' ? 'Member' : 'User'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-3 py-1 text-xs font-semibold rounded-full ${user.is_admin ? 'bg-green-500/20 text-green-500' : 'bg-gray-500/20 text-gray-500'}`}>
+                        {user.is_admin ? 'Yes' : 'No'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => setManagingUserId(managingUserId === user.id ? null : user.id)}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 transition-all"
+                      >
+                        {managingUserId === user.id ? 'Close' : 'Manage User'}
                       </button>
-                    )}
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
+                  {managingUserId === user.id && (
+                    <tr className="bg-secondary/30">
+                      <td colSpan={5} className="px-6 py-6">
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-foreground mb-4">Manage {user.username}</h3>
+                          
+                          {/* Change Role */}
+                          <div className="flex items-center gap-4">
+                            <label className="text-sm font-semibold text-foreground w-32">Change Role:</label>
+                            <select
+                              value={user.role}
+                              onChange={(e) => updateUserRole(user.id, e.target.value)}
+                              disabled={updatingUserId === user.id}
+                              className="px-4 py-2 rounded-lg border border-border bg-background text-foreground text-center focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <option value="user">User</option>
+                              <option value="member">Member</option>
+                              <option value="head">Head</option>
+                            </select>
+                          </div>
+
+                          {/* Admin Toggle */}
+                          <div className="flex items-center gap-4">
+                            <label className="text-sm font-semibold text-foreground w-32">Admin Status:</label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={user.is_admin}
+                                onChange={(e) => updateUserAdmin(user.id, e.target.checked)}
+                                disabled={!isOwner || updatingUserId === user.id}
+                                className="w-5 h-5 rounded border-border bg-background text-primary focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                              />
+                              <span className="text-sm text-foreground/70">
+                                {user.is_admin ? 'Admin' : 'Not Admin'}
+                                {!isOwner && ' (Owner only)'}
+                              </span>
+                            </label>
+                          </div>
+
+                          {/* Change Password */}
+                          {isOwner && (
+                            <div className="flex items-center gap-4">
+                              <label className="text-sm font-semibold text-foreground w-32">Change Password:</label>
+                              <div className="flex gap-2 flex-1 items-center">
+                                <input
+                                  type="password"
+                                  value={newPassword}
+                                  onChange={(e) => setNewPassword(e.target.value)}
+                                  placeholder="New password (min 6 characters)"
+                                  className="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                  disabled={updatingUserId === user.id}
+                                />
+                                <button
+                                  onClick={() => changeUserPassword(user.id)}
+                                  disabled={updatingUserId === user.id || !newPassword}
+                                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Update Password
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

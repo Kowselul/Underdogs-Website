@@ -190,7 +190,7 @@ export default function Settings({ setActiveTab, onUserClick }: SettingsProps) {
 
     return (
         <section className="relative min-h-screen bg-background py-12 sm:py-24">
-            <div className="relative mx-auto max-w-4xl px-4 sm:px-6 animate-fadeInUp">
+            <div className="relative mx-auto max-w-7xl px-4 sm:px-6 animate-fadeInUp">
                 <button
                     onClick={() => setActiveTab?.("profile")}
                     className="mb-4 sm:mb-6 px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base text-foreground/70 hover:text-foreground transition-colors font-semibold"
