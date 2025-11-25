@@ -57,7 +57,7 @@ export default function Navigation({
             onClick={() => setActiveTab("home")} 
             className="group flex items-center gap-3 hover-lift"
           >
-            <span className="text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary to-secondary">
+            <span className="text-xl sm:text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary to-secondary">
               UNDERDOGS
             </span>
           </button>
@@ -239,6 +239,24 @@ export default function Navigation({
         {/* Mobile Menu */}
         {isOpen && (
           <div className="md:hidden mt-4 pb-4 space-y-2 animate-slideInDown">
+            {isLoggedIn && (
+              <div className="mb-4">
+                <form onSubmit={handleSearch}>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search users..."
+                    className="w-full px-4 py-2 rounded-lg text-sm focus:outline-none transition-all"
+                    style={{
+                      backgroundColor: "var(--input)",
+                      border: "1px solid var(--border)",
+                      color: "var(--foreground)",
+                    }}
+                  />
+                </form>
+              </div>
+            )}
             {tabs.map((tab) => (
               <button
                 key={tab.id}

@@ -41,16 +41,16 @@ export default function Members() {
   ]
 
   return (
-    <section className="relative bg-background py-24 sm:py-32 lg:py-40">
+    <section className="relative bg-background py-16 sm:py-24 lg:py-40">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/2 right-0 w-96 h-96 bg-primary/3 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-6 sm:px-8">
-        <div className="mb-20">
-          <div className="mb-12 space-y-4 animate-fadeInUp">
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">Founders & Heads</h2>
-            <p className="text-lg text-foreground/60 max-w-2xl">The visionary leaders behind Underdogs</p>
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-12 sm:mb-20">
+          <div className="mb-8 sm:mb-12 space-y-2 sm:space-y-4 animate-fadeInUp">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-foreground">Founders & Heads</h2>
+            <p className="text-base sm:text-lg text-foreground/60 max-w-2xl">The visionary leaders behind Underdogs</p>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -63,13 +63,13 @@ export default function Members() {
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-secondary/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                 <div
-                  className="relative rounded-xl p-8 transition-all duration-300"
+                  className="relative rounded-xl p-5 sm:p-8 transition-all duration-300"
                   style={{ border: "2px solid var(--primary)", backgroundColor: "var(--card)" }}
                 >
-                  <h3 className="mb-2 text-lg font-bold text-foreground">{member.name}</h3>
-                  <p className="text-sm font-semibold text-primary">{member.role}</p>
+                  <h3 className="mb-2 text-base sm:text-lg font-bold text-foreground">{member.name}</h3>
+                  <p className="text-xs sm:text-sm font-semibold text-primary">{member.role}</p>
 
-                  <div className="mt-6 pt-6" style={{ borderTop: "1px solid var(--border)" }}>
+                  <div className="mt-4 sm:mt-6 pt-4 sm:pt-6" style={{ borderTop: "1px solid var(--border)" }}>
                     {member.involio ? (
                       <a
                         href={member.involio}
@@ -92,9 +92,9 @@ export default function Members() {
         </div>
 
         <div>
-          <div className="mb-12 space-y-4 animate-fadeInUp">
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">Team Members</h2>
-            <p className="text-lg text-foreground/60 max-w-2xl">Talented traders and analysts united by excellence</p>
+          <div className="mb-8 sm:mb-12 space-y-2 sm:space-y-4 animate-fadeInUp">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-foreground">Team Members</h2>
+            <p className="text-base sm:text-lg text-foreground/60 max-w-2xl">Talented traders and analysts united by excellence</p>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -107,13 +107,13 @@ export default function Members() {
                 <div className="absolute inset-0 bg-gradient-to-br from-secondary/50 to-secondary/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                 <div
-                  className="relative rounded-xl p-8 transition-all duration-300"
+                  className="relative rounded-xl p-5 sm:p-8 transition-all duration-300"
                   style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)" }}
                 >
-                  <h3 className="mb-2 text-lg font-bold text-foreground">{member.name}</h3>
-                  <p className="text-sm text-foreground/60">{member.role}</p>
+                  <h3 className="mb-2 text-base sm:text-lg font-bold text-foreground">{member.name}</h3>
+                  <p className="text-xs sm:text-sm text-foreground/60">{member.role}</p>
 
-                  <div className="mt-6 pt-6" style={{ borderTop: "1px solid var(--border)" }}>
+                  <div className="mt-4 sm:mt-6 pt-4 sm:pt-6" style={{ borderTop: "1px solid var(--border)" }}>
                     {member.involio ? (
                       <a
                         href={member.involio}

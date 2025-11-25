@@ -63,27 +63,27 @@ export default function Login({ onSwitchToRegister, onLoginSuccess }: LoginProps
   }
 
   return (
-    <section className="relative min-h-screen bg-background py-24">
+    <section className="relative min-h-screen bg-background py-12 sm:py-24">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse" />
       </div>
 
-      <div className="relative mx-auto max-w-md px-6 animate-fadeInUp">
-        <div className="rounded-xl p-8" style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)" }}>
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Welcome Back</h1>
-            <p className="text-foreground/60">Sign in to your Underdogs account</p>
+      <div className="relative mx-auto max-w-md px-4 sm:px-6 animate-fadeInUp">
+        <div className="rounded-xl p-6 sm:p-8" style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)" }}>
+          <div className="mb-6 sm:mb-8 text-center">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Welcome Back</h1>
+            <p className="text-sm sm:text-base text-foreground/60">Sign in to your Underdogs account</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <div className="space-y-2 animate-slideInLeft">
-              <label className="block text-sm font-semibold text-foreground">Email or Username</label>
+              <label className="block text-xs sm:text-sm font-semibold text-foreground">Email or Username</label>
               <input
                 type="text"
                 value={emailOrUsername}
                 onChange={(e) => setEmailOrUsername(e.target.value)}
                 placeholder="you@example.com or username"
-                className="w-full px-4 py-3 rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
                 style={{
                   border: "1px solid var(--border)",
                   backgroundColor: "var(--input)",
@@ -93,13 +93,13 @@ export default function Login({ onSwitchToRegister, onLoginSuccess }: LoginProps
             </div>
 
             <div className="space-y-2 animate-slideInLeft" style={{ animationDelay: "0.1s" }}>
-              <label className="block text-sm font-semibold text-foreground">Password</label>
+              <label className="block text-xs sm:text-sm font-semibold text-foreground">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
                 style={{
                   border: "1px solid var(--border)",
                   backgroundColor: "var(--input)",
@@ -128,7 +128,7 @@ export default function Login({ onSwitchToRegister, onLoginSuccess }: LoginProps
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover-lift disabled:opacity-50 transition-all animate-slideInLeft"
+              className="w-full py-2.5 sm:py-3 text-sm sm:text-base bg-primary text-primary-foreground font-bold rounded-lg hover-lift disabled:opacity-50 transition-all animate-slideInLeft"
               style={{ animationDelay: "0.3s" }}
             >
               {isLoading ? "Signing in..." : "Sign In"}

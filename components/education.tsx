@@ -71,14 +71,14 @@ export default function Education() {
   ]
 
   return (
-    <section className="relative bg-background py-24 sm:py-32 lg:py-40">
+    <section className="relative bg-background py-16 sm:py-24 lg:py-40">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-secondary/3 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-6 sm:px-8">
-        <div className="mb-16 space-y-4 animate-fadeInUp">
-          <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-foreground">Education & Resources</h2>
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-12 sm:mb-16 space-y-3 sm:space-y-4 animate-fadeInUp">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-foreground">Education & Resources</h2>
           <p className="text-lg text-foreground/60 max-w-2xl">
             Comprehensive training materials for continuous professional development
           </p>

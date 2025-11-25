@@ -68,70 +68,70 @@ export default function Register({ onSwitchToLogin, onRegisterSuccess }: Registe
   }
 
   return (
-    <section className="relative min-h-screen bg-background py-24">
+    <section className="relative min-h-screen bg-background py-12 sm:py-24">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl animate-pulse" />
       </div>
 
-      <div className="relative mx-auto max-w-md px-6 animate-fadeInUp">
-        <div className="rounded-xl p-8" style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)" }}>
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Join Underdogs</h1>
-            <p className="text-foreground/60">Create your trading collective account</p>
+      <div className="relative mx-auto max-w-md px-4 sm:px-6 animate-fadeInUp">
+        <div className="rounded-xl p-6 sm:p-8" style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)" }}>
+          <div className="mb-6 sm:mb-8 text-center">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Join Underdogs</h1>
+            <p className="text-sm sm:text-base text-foreground/60">Create your trading collective account</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             <div className="space-y-2 animate-slideInLeft">
-              <label className="block text-sm font-semibold text-foreground">Username</label>
+              <label className="block text-xs sm:text-sm font-semibold text-foreground">Username</label>
               <input
                 type="text"
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
                 placeholder="Choose your username"
-                className="w-full px-4 py-3 rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
                 style={{ border: "1px solid var(--border)", backgroundColor: "var(--input)" }}
                 required
               />
             </div>
 
             <div className="space-y-2 animate-slideInLeft" style={{ animationDelay: "0.1s" }}>
-              <label className="block text-sm font-semibold text-foreground">Email</label>
+              <label className="block text-xs sm:text-sm font-semibold text-foreground">Email</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="you@example.com"
-                className="w-full px-4 py-3 rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
                 style={{ border: "1px solid var(--border)", backgroundColor: "var(--input)" }}
                 required
               />
             </div>
 
             <div className="space-y-2 animate-slideInLeft" style={{ animationDelay: "0.2s" }}>
-              <label className="block text-sm font-semibold text-foreground">Password</label>
+              <label className="block text-xs sm:text-sm font-semibold text-foreground">Password</label>
               <input
                 type="password"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
                 style={{ border: "1px solid var(--border)", backgroundColor: "var(--input)" }}
                 required
               />
             </div>
 
             <div className="space-y-2 animate-slideInLeft" style={{ animationDelay: "0.3s" }}>
-              <label className="block text-sm font-semibold text-foreground">Confirm Password</label>
+              <label className="block text-xs sm:text-sm font-semibold text-foreground">Confirm Password</label>
               <input
                 type="password"
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
                 style={{ border: "1px solid var(--border)", backgroundColor: "var(--input)" }}
                 required
               />
@@ -149,8 +149,8 @@ export default function Register({ onSwitchToLogin, onRegisterSuccess }: Registe
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover-lift disabled:opacity-50 transition-all animate-slideInLeft"
-              style={{ animationDelay: "0.5s" }}
+              className="w-full py-2.5 sm:py-3 text-sm sm:text-base bg-primary text-primary-foreground font-bold rounded-lg hover-lift disabled:opacity-50 transition-all animate-slideInLeft"
+              style={{ animationDelay: "0.4s" }}
             >
               {isLoading ? "Creating account..." : "Create Account"}
             </button>

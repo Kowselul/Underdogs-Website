@@ -1,14 +1,14 @@
 export default function Footer() {
   return (
     <footer
-      className="bg-background py-12 sm:py-16 mt-24 animate-fadeIn"
+      className="bg-background py-8 sm:py-12 lg:py-16 mt-16 sm:mt-24 animate-fadeIn"
       style={{ borderTop: "1px solid var(--border)" }}
     >
-      <div className="mx-auto max-w-7xl px-6 sm:px-8">
-        <div className="grid gap-8 md:grid-cols-4 mb-12">
-          <div className="space-y-4">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-6 sm:gap-8 grid-cols-2 md:grid-cols-4 mb-8 sm:mb-12">
+          <div className="space-y-3 sm:space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-primary">About</h3>
-            <p className="text-sm text-foreground/60">
+            <p className="text-xs sm:text-sm text-foreground/60">
               Professional trading collective focused on strategic excellence
             </p>
           </div>
@@ -78,11 +78,11 @@ export default function Footer() {
         </div>
 
         <div
-          className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-8"
+          className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4 pt-6 sm:pt-8 text-center sm:text-left"
           style={{ borderTop: "1px solid var(--border)" }}
         >
-          <p className="text-sm text-foreground/50">© 2025 Underdogs Trading Collective. All rights reserved.</p>
-          <p className="text-sm text-foreground/50">Built for professional traders</p>
+          <p className="text-xs sm:text-sm text-foreground/50">© 2025 Underdogs Trading Collective. All rights reserved.</p>
+          <p className="text-xs sm:text-sm text-foreground/50">Built for professional traders</p>
         </div>
       </div>
     </footer>
