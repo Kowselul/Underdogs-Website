@@ -19,7 +19,6 @@ interface Profile {
     youtube_url: string
     discord_tag: string
     tiktok_url: string
-    website_url: string
 }
 
 export default function EditProfile({ setActiveTab }: EditProfileProps) {
@@ -35,7 +34,6 @@ export default function EditProfile({ setActiveTab }: EditProfileProps) {
         youtube_url: "",
         discord_tag: "",
         tiktok_url: "",
-        website_url: "",
     })
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -74,7 +72,6 @@ export default function EditProfile({ setActiveTab }: EditProfileProps) {
                 youtube_url: profileData.youtube_url || "",
                 discord_tag: profileData.discord_tag || "",
                 tiktok_url: profileData.tiktok_url || "",
-                website_url: profileData.website_url || "",
             })
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to load profile")
@@ -102,7 +99,6 @@ export default function EditProfile({ setActiveTab }: EditProfileProps) {
                     youtube_url: profile.youtube_url,
                     discord_tag: profile.discord_tag,
                     tiktok_url: profile.tiktok_url,
-                    website_url: profile.website_url,
                 })
                 .eq("id", user.id)
 
@@ -340,17 +336,6 @@ export default function EditProfile({ setActiveTab }: EditProfileProps) {
                                     value={profile.tiktok_url}
                                     onChange={(e) => setProfile({ ...profile, tiktok_url: e.target.value })}
                                     placeholder="https://tiktok.com/@username"
-                                    className="w-full px-4 py-3 rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
-                                    style={{ border: "1px solid var(--border)", backgroundColor: "var(--input)" }}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="block text-sm font-semibold text-foreground">Website URL</label>
-                                <input
-                                    type="url"
-                                    value={profile.website_url}
-                                    onChange={(e) => setProfile({ ...profile, website_url: e.target.value })}
-                                    placeholder="https://yourwebsite.com"
                                     className="w-full px-4 py-3 rounded-lg text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 transition-all"
                                     style={{ border: "1px solid var(--border)", backgroundColor: "var(--input)" }}
                                 />

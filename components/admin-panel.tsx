@@ -25,6 +25,8 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
+  const [currentUsername, setCurrentUsername] = useState<string | null>(null)
+  const isOwner = currentUsername?.toLowerCase() === 'kowse'
 
   useEffect(() => {
     fetchUsers()
@@ -33,6 +35,21 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
   const fetchUsers = async () => {
     try {
       setLoading(true)
+
+      // Get current user's username
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", authUser.id)
+          .single()
+
+        if (profileData) {
+          setCurrentUsername(profileData.username)
+        }
+      }
+
       const { data, error } = await supabase
         .from("profiles")
         .select("id, username, email, role, avatar_url, is_admin")
@@ -72,6 +89,13 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
   }
 
   const updateUserAdmin = async (userId: string, isAdmin: boolean) => {
+    // Only owner can modify admin permissions
+    if (!isOwner) {
+      setError("Only the owner can modify admin permissions")
+      setTimeout(() => setError(null), 3000)
+      return
+    }
+
     try {
       setUpdatingUserId(userId)
       setError(null)
@@ -153,7 +177,7 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
             <thead className="bg-secondary">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">User</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Email</th>
+                {isOwner && <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Email</th>}
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Role</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Admin</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
@@ -173,10 +197,15 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
                           </span>
                         )}
                       </div>
-                      <span className="font-medium text-foreground">@{user.username}</span>
+                      <button
+                        onClick={() => onUserClick?.(user.username)}
+                        className="font-medium text-foreground hover:text-primary transition-colors"
+                      >
+                        @{user.username}
+                      </button>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-foreground/70">{user.email}</td>
+                  {isOwner && <td className="px-6 py-4 text-foreground/70">{user.email}</td>}
                   <td className="px-6 py-4">
                     <span
                       className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${user.role === 'head'
@@ -188,6 +217,16 @@ export default function AdminPanel({ onUserClick }: AdminPanelProps) {
                     >
                       {user.role === 'head' ? 'Head' : user.role === 'member' ? 'Member' : 'User'}
                     </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <input
+                      type="checkbox"
+                      checked={user.is_admin}
+                      onChange={(e) => updateUserAdmin(user.id, e.target.checked)}
+                      disabled={!isOwner || updatingUserId === user.id}
+                      className="w-5 h-5 rounded border-border bg-background text-primary focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      title={!isOwner ? "Only the owner can modify admin permissions" : ""}
+                    />
                   </td>
                   <td className="px-6 py-4">
                     <select

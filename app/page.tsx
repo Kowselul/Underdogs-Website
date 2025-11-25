@@ -65,8 +65,40 @@ export default function Home() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("activeTab", activeTab)
+
+      // Update URL based on active tab
+      const url = new URL(window.location.href)
+
+      if (activeTab === "profile" && viewingUsername) {
+        // Keep user parameter for viewing other profiles
+        url.searchParams.set('user', viewingUsername)
+        url.pathname = '/profile'
+      } else if (activeTab === "profile" && !viewingUsername) {
+        // Own profile
+        url.searchParams.delete('user')
+        url.pathname = '/profile'
+      } else if (activeTab === "home") {
+        // Clear everything for home
+        url.searchParams.delete('user')
+        url.pathname = '/'
+      } else if (activeTab === "login" || activeTab === "register") {
+        // Don't show login/register in URL
+        url.searchParams.delete('user')
+        url.pathname = '/'
+      } else {
+        // Other tabs (members, education, search, settings, edit-profile)
+        url.searchParams.delete('user')
+        url.pathname = `/${activeTab}`
+      }
+
+      window.history.pushState({}, '', url)
+
+      // Clear viewingUsername when navigating away from profile
+      if (activeTab !== "profile" && viewingUsername) {
+        setViewingUsername(null)
+      }
     }
-  }, [activeTab])
+  }, [activeTab, viewingUsername])
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
