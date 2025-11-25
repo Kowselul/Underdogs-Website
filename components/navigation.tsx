@@ -138,18 +138,18 @@ export default function Navigation({
                 <div className="relative">
                   <button
                     onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                    className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors flex items-center gap-2 hover:bg-secondary/50 rounded-lg"
+                    className="px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-foreground/70 hover:text-foreground transition-colors flex items-center gap-1 sm:gap-2 hover:bg-secondary/50 rounded-lg"
                   >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path
                         fillRule="evenodd"
                         d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
                         clipRule="evenodd"
                       />
                     </svg>
-                    @{username}
+                    <span className="max-w-[80px] sm:max-w-none truncate">@{username}</span>
                     <svg
-                      className={`w-4 h-4 transition-transform ${isUserDropdownOpen ? "rotate-180" : ""}`}
+                      className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform ${isUserDropdownOpen ? "rotate-180" : ""}`}
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -164,7 +164,7 @@ export default function Navigation({
                   {/* Dropdown Menu */}
                   {isUserDropdownOpen && (
                     <div
-                      className="absolute right-0 mt-2 w-48 rounded-lg shadow-lg animate-slideInDown"
+                      className="absolute right-0 mt-2 w-44 sm:w-48 rounded-lg shadow-xl animate-slideInDown z-50"
                       style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}
                     >
                       <button
@@ -173,7 +173,7 @@ export default function Navigation({
                           setActiveTab("profile")
                           setIsUserDropdownOpen(false)
                         }}
-                        className="block w-full text-left px-4 py-3 text-foreground hover:bg-secondary/50 rounded-t-lg transition-colors text-sm"
+                        className="block w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 text-foreground hover:bg-secondary/50 rounded-t-lg transition-colors text-xs sm:text-sm font-medium"
                       >
                         Profile
                       </button>
@@ -182,7 +182,7 @@ export default function Navigation({
                           setActiveTab("settings")
                           setIsUserDropdownOpen(false)
                         }}
-                        className="block w-full text-left px-4 py-3 text-foreground hover:bg-secondary/50 transition-colors text-sm border-t"
+                        className="block w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 text-foreground hover:bg-secondary/50 transition-colors text-xs sm:text-sm font-medium border-t"
                         style={{ borderColor: "var(--border)" }}
                       >
                         Settings
@@ -192,7 +192,7 @@ export default function Navigation({
                           onLogout()
                           setIsUserDropdownOpen(false)
                         }}
-                        className="block w-full text-left px-4 py-3 text-destructive hover:bg-secondary/50 rounded-b-lg transition-colors text-sm border-t"
+                        className="block w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 text-destructive hover:bg-secondary/50 rounded-b-lg transition-colors text-xs sm:text-sm font-medium border-t"
                         style={{ borderColor: "var(--border)" }}
                       >
                         Logout

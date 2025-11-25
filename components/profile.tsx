@@ -553,18 +553,18 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
 
   if (activeTab === "settings") {
     return (
-      <section className="relative min-h-screen bg-background py-24">
-        <div className="relative mx-auto max-w-2xl px-6 animate-fadeInUp">
+      <section className="relative min-h-screen bg-background py-12 sm:py-24">
+        <div className="relative mx-auto max-w-2xl px-4 sm:px-6 animate-fadeInUp">
           <button
             onClick={() => setActiveTab?.("profile")}
-            className="mb-6 px-4 py-2 text-foreground/70 hover:text-foreground transition-colors font-semibold"
+            className="mb-4 sm:mb-6 px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base text-foreground/70 hover:text-foreground transition-colors font-semibold"
           >
             ← Back to Profile
           </button>
 
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div
-              className="rounded-xl p-8"
+              className="rounded-xl p-5 sm:p-8"
               style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)" }}
             >
               <h1 className="text-3xl font-bold text-foreground mb-2">Account Settings</h1>
@@ -583,7 +583,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
 
             {/* Email Section */}
             <div
-              className="rounded-xl p-8 animate-slideInLeft"
+              className="rounded-xl p-5 sm:p-8 animate-slideInLeft"
               style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)", animationDelay: "0.05s" }}
             >
               <div className="flex items-center justify-between mb-6">
@@ -622,7 +622,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
 
             {/* Password Section */}
             <div
-              className="rounded-xl p-8 animate-slideInLeft"
+              className="rounded-xl p-5 sm:p-8 animate-slideInLeft"
               style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)", animationDelay: "0.1s" }}
             >
               <div className="flex items-center justify-between mb-6">
@@ -680,25 +680,25 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
   }
 
   return (
-    <section className="relative min-h-screen py-8" style={{ backgroundColor: "var(--background)" }}>
-      <div className="mx-auto max-w-6xl px-6">
+    <section className="relative min-h-screen py-4 sm:py-8" style={{ backgroundColor: "var(--background)" }}>
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {/* Profile Header */}
         <div
-          className="rounded-2xl p-8 mb-8 animate-fadeInUp"
+          className="rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 animate-fadeInUp"
           style={{
             border: "1px solid var(--border)",
             backgroundColor: "var(--card)",
             background: `linear-gradient(135deg, var(--secondary) 0%, var(--card) 100%)`,
           }}
         >
-          <div className="flex items-start justify-between gap-8 mb-8">
-            <div className="flex gap-6 items-start">
-              <div className="relative group">
-                <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0 hover-lift overflow-hidden">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-8 mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start w-full sm:w-auto">
+              <div className="relative group mx-auto sm:mx-0">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0 hover-lift overflow-hidden">
                   {profile.avatar_url ? (
                     <img src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-6xl font-bold text-primary-foreground">
+                    <span className="text-4xl sm:text-5xl lg:text-6xl font-bold text-primary-foreground">
                       {profile.username.slice(0, 2).toUpperCase()}
                     </span>
                   )}
@@ -709,10 +709,10 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                 >
                   <div className="text-white text-center">
                     {uploadingAvatar ? (
-                      <div className="text-sm font-semibold">Uploading...</div>
+                      <div className="text-xs sm:text-sm font-semibold">Uploading...</div>
                     ) : (
                       <>
-                        <svg className="w-8 h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -735,18 +735,18 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                   className="hidden"
                 />
               </div>
-              <div className="flex-1">
-                <h1 className="text-4xl font-bold text-foreground mb-2">@{profile.username}</h1>
-                <p className="text-lg text-foreground/70 mb-4">{profile.bio}</p>
+              <div className="flex-1 w-full sm:w-auto text-center sm:text-left">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2">@{profile.username}</h1>
+                <p className="text-sm sm:text-base lg:text-lg text-foreground/70 mb-4">{profile.bio}</p>
 
                 {/* Social Links */}
-                <div className="flex gap-4 mb-4 flex-wrap">
+                <div className="flex gap-2 sm:gap-3 lg:gap-4 mb-4 flex-wrap justify-center sm:justify-start">
                   {profile.twitter_url && (
                     <a
                       href={profile.twitter_url.startsWith('http') ? profile.twitter_url : `https://${profile.twitter_url}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg font-semibold transition-all hover-lift"
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-lg font-semibold transition-all hover-lift"
                       style={{
                         backgroundColor: "var(--primary)",
                         color: "var(--primary-foreground)",
@@ -760,7 +760,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                       href={profile.involio_profile_url.startsWith('http') ? profile.involio_profile_url : `https://${profile.involio_profile_url}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg font-semibold transition-all hover-lift"
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-lg font-semibold transition-all hover-lift"
                       style={{
                         border: "2px solid var(--primary)",
                         color: "var(--primary)",
@@ -774,7 +774,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                       href={profile.instagram_url.startsWith('http') ? profile.instagram_url : `https://${profile.instagram_url}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg font-semibold transition-all hover-lift"
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-lg font-semibold transition-all hover-lift"
                       style={{
                         border: "2px solid var(--primary)",
                         color: "var(--primary)",
@@ -788,7 +788,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                       href={profile.linkedin_url.startsWith('http') ? profile.linkedin_url : `https://${profile.linkedin_url}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg font-semibold transition-all hover-lift"
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-lg font-semibold transition-all hover-lift"
                       style={{
                         border: "2px solid var(--primary)",
                         color: "var(--primary)",
@@ -802,7 +802,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                       href={profile.youtube_url.startsWith('http') ? profile.youtube_url : `https://${profile.youtube_url}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg font-semibold transition-all hover-lift"
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-lg font-semibold transition-all hover-lift"
                       style={{
                         border: "2px solid var(--primary)",
                         color: "var(--primary)",
@@ -813,7 +813,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                   )}
                   {profile.discord_tag && (
                     <div
-                      className="px-4 py-2 rounded-lg font-semibold transition-all"
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-lg font-semibold transition-all"
                       style={{
                         border: "2px solid var(--primary)",
                         color: "var(--primary)",
@@ -827,7 +827,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                       href={profile.tiktok_url.startsWith('http') ? profile.tiktok_url : `https://${profile.tiktok_url}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg font-semibold transition-all hover-lift"
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-lg font-semibold transition-all hover-lift"
                       style={{
                         border: "2px solid var(--primary)",
                         color: "var(--primary)",
@@ -841,7 +841,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                       href={profile.website_url.startsWith('http') ? profile.website_url : `https://${profile.website_url}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg font-semibold transition-all hover-lift"
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm rounded-lg font-semibold transition-all hover-lift"
                       style={{
                         border: "2px solid var(--primary)",
                         color: "var(--primary)",
@@ -857,7 +857,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
             {isOwnProfile && (
               <button
                 onClick={() => (isEditing ? saveProfile() : setIsEditing(true))}
-                className="px-6 py-3 rounded-lg font-semibold transition-all hover-lift flex-shrink-0"
+                className="w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base rounded-lg font-semibold transition-all hover-lift flex-shrink-0 mt-2 sm:mt-0"
                 style={{
                   backgroundColor: "var(--primary)",
                   color: "var(--primary-foreground)",
@@ -869,24 +869,24 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
           </div>
 
           {/* Profile Stats */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {[{ label: "Posts", value: posts.length }].map((stat, i) => (
               <div
                 key={i}
-                className="p-4 rounded-lg text-center animate-slideInUp"
+                className="p-3 sm:p-4 rounded-lg text-center animate-slideInUp"
                 style={{
                   backgroundColor: "var(--background)",
                   animationDelay: `${i * 0.1}s`,
                 }}
               >
-                <p className="text-sm text-foreground/60 mb-1">{stat.label}</p>
-                <p className="text-xl font-bold text-foreground">{stat.value}</p>
+                <p className="text-xs sm:text-sm text-foreground/60 mb-1">{stat.label}</p>
+                <p className="text-lg sm:text-xl font-bold text-foreground">{stat.value}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Sidebar */}
           <div className="lg:col-span-1">
             <div
@@ -1064,7 +1064,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                     value={newPost}
                     onChange={(e) => setNewPost(e.target.value)}
                     placeholder="Share your thoughts or market insights..."
-                    className="flex-1 px-4 py-3 rounded-lg resize-none focus:outline-none transition-all"
+                    className="flex-1 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base rounded-lg resize-none focus:outline-none transition-all"
                     style={{
                       backgroundColor: "var(--input)",
                       border: "1px solid var(--border)",
@@ -1073,12 +1073,12 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                     rows={3}
                   />
                 </div>
-                <div className="flex justify-between items-center">
-                  <label className="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors">
-                    <svg className="w-5 h-5 text-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex justify-between items-center gap-2">
+                  <label className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-foreground/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <span className="text-sm text-foreground/70">Add Photo</span>
+                    <span className="text-xs sm:text-sm text-foreground/70">Add Photo</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1095,7 +1095,7 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                   <button
                     onClick={() => addPost()}
                     disabled={uploadingImage}
-                    className="px-6 py-2 rounded-lg font-semibold transition-all hover-lift disabled:opacity-50"
+                    className="px-4 py-1.5 sm:px-6 sm:py-2 text-sm sm:text-base rounded-lg font-semibold transition-all hover-lift disabled:opacity-50"
                     style={{
                       backgroundColor: "var(--primary)",
                       color: "var(--primary-foreground)",
@@ -1110,10 +1110,10 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
             {/* Posts Feed */}
             {posts.length === 0 ? (
               <div
-                className="rounded-2xl p-8 text-center"
+                className="rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center"
                 style={{ border: "1px solid var(--border)", backgroundColor: "var(--card)" }}
               >
-                <p className="text-foreground/60">
+                <p className="text-sm sm:text-base text-foreground/60">
                   {isOwnProfile ? "No posts yet. Share your first thought!" : "It's quite quiet in here."}
                 </p>
               </div>
@@ -1121,15 +1121,15 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
               posts.map((post, index) => (
                 <div
                   key={post.id}
-                  className="rounded-2xl p-6 animate-slideInUp"
+                  className="rounded-xl sm:rounded-2xl p-4 sm:p-6 animate-slideInUp"
                   style={{
                     border: "1px solid var(--border)",
                     backgroundColor: "var(--card)",
                     animationDelay: `${index * 0.1}s`,
                   }}
                 >
-                  <div className="flex gap-4 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <div className="flex gap-3 sm:gap-4 mb-3 sm:mb-4">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {profile.avatar_url ? (
                         <img
                           src={profile.avatar_url}
@@ -1137,16 +1137,16 @@ export default function Profile({ activeTab = "profile", setActiveTab, viewingUs
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <span className="font-bold text-primary-foreground text-sm">
+                        <span className="font-bold text-primary-foreground text-xs sm:text-sm">
                           {profile.username.slice(0, 2).toUpperCase()}
                         </span>
                       )}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-foreground">@{profile.username}</p>
-                          <p className="text-sm text-foreground/60">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-bold text-foreground text-sm sm:text-base truncate">@{profile.username}</p>
+                          <p className="text-xs sm:text-sm text-foreground/60">
                             {new Date(post.created_at).toLocaleDateString()}
                             {post.updated_at && post.updated_at !== post.created_at && (
                               <span className="ml-2 text-xs">(edited)</span>
