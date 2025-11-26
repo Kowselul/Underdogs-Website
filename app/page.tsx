@@ -127,6 +127,7 @@ export default function Home() {
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
+    let mounted = true
 
     const checkAuth = async () => {
       try {
@@ -137,39 +138,62 @@ export default function Home() {
 
         console.log("Session:", session, "Error:", sessionError)
 
+        if (!mounted) return
+
         if (sessionError) {
           console.error("Error getting session:", sessionError)
           setIsLoggedIn(false)
+          setUsername("")
           setLoading(false)
           return
         }
 
         if (session?.user) {
-          setIsLoggedIn(true)
-
           // Fetch username from profiles table
           console.log("Fetching profile for user:", session.user.id)
-          const { data: profile, error: profileError } = await supabase
-            .from("profiles")
-            .select("username")
-            .eq("id", session.user.id)
-            .single()
+          
+          try {
+            const { data: profile, error: profileError } = await supabase
+              .from("profiles")
+              .select("username")
+              .eq("id", session.user.id)
+              .single()
 
-          console.log("Profile data:", profile, "Error:", profileError)
+            console.log("Profile data:", profile, "Error:", profileError)
 
-          if (profile) {
-            setUsername(profile.username)
+            if (!mounted) return
+
+            if (profile && profile.username) {
+              setUsername(profile.username)
+              setIsLoggedIn(true)
+            } else {
+              console.error("Profile not found or missing username")
+              setIsLoggedIn(false)
+              setUsername("")
+            }
+          } catch (profileErr) {
+            console.error("Profile fetch error:", profileErr)
+            if (mounted) {
+              setIsLoggedIn(false)
+              setUsername("")
+            }
           }
         } else {
           setIsLoggedIn(false)
+          setUsername("")
         }
 
-        console.log("Setting loading to false")
-        setLoading(false)
+        if (mounted) {
+          console.log("Setting loading to false")
+          setLoading(false)
+        }
       } catch (err) {
         console.error("Auth check failed:", err)
-        setIsLoggedIn(false)
-        setLoading(false)
+        if (mounted) {
+          setIsLoggedIn(false)
+          setUsername("")
+          setLoading(false)
+        }
       }
     }
 
@@ -180,20 +204,31 @@ export default function Home() {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event, session?.user)
 
+      if (!mounted) return
+
       // Clear any pending timeout when auth state changes
       if (timeoutId) {
         clearTimeout(timeoutId)
       }
 
       if (session?.user) {
-        setIsLoggedIn(true)
-        setLoading(false)
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", session.user.id)
+          .single()
 
-        const { data: profile } = await supabase.from("profiles").select("username").eq("id", session.user.id).single()
+        if (!mounted) return
 
-        if (profile) {
+        if (profile && profile.username) {
           setUsername(profile.username)
+          setIsLoggedIn(true)
+        } else {
+          console.error("Profile not found in auth state change")
+          setIsLoggedIn(false)
+          setUsername("")
         }
+        setLoading(false)
       } else {
         setIsLoggedIn(false)
         setUsername("")
@@ -203,11 +238,14 @@ export default function Home() {
 
     // Set a backup timeout only if loading takes too long
     timeoutId = setTimeout(() => {
-      console.log("Auth check timed out - forcing loading to false")
-      setLoading(false)
-    }, 10000) // 10 second timeout as a safety net
+      if (mounted) {
+        console.log("Auth check timed out - forcing loading to false")
+        setLoading(false)
+      }
+    }, 5000) // 5 second timeout
 
     return () => {
+      mounted = false
       subscription?.unsubscribe()
       if (timeoutId) {
         clearTimeout(timeoutId)

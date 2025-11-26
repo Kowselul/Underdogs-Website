@@ -62,6 +62,8 @@ export default function Profile({ setActiveTab, viewingUsername, onUserClick }: 
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
 
+  const [currentUser, setCurrentUser] = useState<{ username: string; avatar_url: string } | null>(null)
+
   const [profile, setProfile] = useState<Profile>({
     username: "",
     email: "",
@@ -109,6 +111,20 @@ export default function Profile({ setActiveTab, viewingUsername, onUserClick }: 
           setIsOwnProfile(false)
         } else {
           setIsOwnProfile(true)
+        }
+
+        // Fetch current logged-in user profile for avatar in comments
+        const { data: currentUserData } = await supabase
+          .from("profiles")
+          .select("username, avatar_url")
+          .eq("id", user.id)
+          .single()
+        
+        if (currentUserData) {
+          setCurrentUser({
+            username: currentUserData.username,
+            avatar_url: currentUserData.avatar_url
+          })
         }
 
         // Fetch profile
@@ -638,6 +654,26 @@ export default function Profile({ setActiveTab, viewingUsername, onUserClick }: 
     )
   }
 
+  if (error) {
+    return (
+      <section className="relative min-h-screen bg-background py-24 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-destructive text-lg">{error}</p>
+          <button
+            onClick={() => {
+              setError(null)
+              setLoading(true)
+              window.location.reload()
+            }}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 transition-all"
+          >
+            Try Again
+          </button>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="relative min-h-screen py-4 sm:py-8" style={{ backgroundColor: "var(--background)" }}>
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -1149,15 +1185,15 @@ export default function Profile({ setActiveTab, viewingUsername, onUserClick }: 
                       {/* Comment Input */}
                       <div className="flex gap-3">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          {profile.avatar_url ? (
+                          {currentUser?.avatar_url ? (
                             <img
-                              src={profile.avatar_url}
-                              alt={profile.username}
+                              src={currentUser.avatar_url}
+                              alt={currentUser.username}
                               className="w-full h-full object-cover"
                             />
                           ) : (
                             <span className="font-bold text-primary-foreground text-xs">
-                              {profile.username.slice(0, 2).toUpperCase()}
+                              {currentUser?.username?.slice(0, 2).toUpperCase() || "??"}
                             </span>
                           )}
                         </div>
@@ -1250,7 +1286,7 @@ export default function Profile({ setActiveTab, viewingUsername, onUserClick }: 
                                       }}
                                       className="text-xs text-primary hover:underline"
                                     >
-                                      Reply
+                                      Reply{comment.replies && comment.replies.length > 0 ? ` (${comment.replies.length})` : ''}
                                     </button>
                                     <button
                                       onClick={() => toggleCommentLike(comment.id, post.id)}
@@ -1285,15 +1321,15 @@ export default function Profile({ setActiveTab, viewingUsername, onUserClick }: 
                                 {replyingTo === comment.id && (
                                   <div className="flex gap-2 mt-2">
                                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0">
-                                      {profile.avatar_url ? (
+                                      {currentUser?.avatar_url ? (
                                         <img
-                                          src={profile.avatar_url}
-                                          alt={profile.username}
+                                          src={currentUser.avatar_url}
+                                          alt={currentUser.username}
                                           className="w-full h-full rounded-full object-cover"
                                         />
                                       ) : (
                                         <span className="font-bold text-primary-foreground text-[10px]">
-                                          {profile.username.slice(0, 2).toUpperCase()}
+                                          {currentUser?.username?.slice(0, 2).toUpperCase() || "??"}
                                         </span>
                                       )}
                                     </div>
