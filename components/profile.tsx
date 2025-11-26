@@ -53,6 +53,7 @@ export default function Profile({ setActiveTab, viewingUsername, onUserClick }: 
   const [isOwnProfile, setIsOwnProfile] = useState(true)
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyContent, setReplyContent] = useState("")
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set())
   const [uploadingImage, setUploadingImage] = useState(false)
   const [modalImage, setModalImage] = useState<string | null>(null)
   const [imageZoom, setImageZoom] = useState(1)
@@ -392,9 +393,47 @@ export default function Profile({ setActiveTab, viewingUsername, onUserClick }: 
 
         const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || [])
 
+        // Fetch reply counts and most recent reply for each comment
+        const commentIds = commentsData.map(c => c.id)
+        const { data: allRepliesData } = await supabase
+          .from("comments")
+          .select("*")
+          .in("parent_comment_id", commentIds)
+          .order("created_at", { ascending: false })
+
+        // Get unique reply user IDs for their profiles
+        const replyUserIds = [...new Set(allRepliesData?.map(r => r.user_id) || [])]
+        const { data: replyProfilesData } = await supabase
+          .from("profiles")
+          .select("id, username, avatar_url")
+          .in("id", replyUserIds)
+
+        const replyProfilesMap = new Map(replyProfilesData?.map(p => [p.id, p]) || [])
+
+        // Group replies by parent comment and get the most recent one
+        const repliesByComment = new Map<string, any[]>()
+        const mostRecentReplyByComment = new Map<string, any>()
+        
+        allRepliesData?.forEach(reply => {
+          const parentId = reply.parent_comment_id
+          if (!repliesByComment.has(parentId)) {
+            repliesByComment.set(parentId, [])
+            mostRecentReplyByComment.set(parentId, {
+              ...reply,
+              profiles: replyProfilesMap.get(reply.user_id)
+            })
+          }
+          repliesByComment.get(parentId)?.push({
+            ...reply,
+            profiles: replyProfilesMap.get(reply.user_id)
+          })
+        })
+
         const enrichedComments = commentsData.map(comment => ({
           ...comment,
-          profiles: profilesMap.get(comment.user_id)
+          profiles: profilesMap.get(comment.user_id),
+          replies: repliesByComment.get(comment.id) || [],
+          mostRecentReply: mostRecentReplyByComment.get(comment.id)
         }))
 
         setPostComments({ ...postComments, [postId]: enrichedComments })
@@ -1273,15 +1312,12 @@ export default function Profile({ setActiveTab, viewingUsername, onUserClick }: 
                                       {new Date(comment.created_at).toLocaleString()}
                                     </p>
                                     <button
-                                      onClick={async () => {
+                                      onClick={() => {
                                         if (replyingTo === comment.id) {
                                           setReplyingTo(null)
                                           setReplyContent("")
                                         } else {
                                           setReplyingTo(comment.id)
-                                          if (!comment.replies) {
-                                            await loadReplies(post.id, comment.id)
-                                          }
                                         }
                                       }}
                                       className="text-xs text-primary hover:underline"
@@ -1373,8 +1409,79 @@ export default function Profile({ setActiveTab, viewingUsername, onUserClick }: 
                                   </div>
                                 )}
 
-                                {/* Nested Replies */}
-                                {comment.replies && comment.replies.length > 0 && (
+                                {/* Most Recent Reply Preview */}
+                                {comment.mostRecentReply && !expandedReplies.has(comment.id) && (
+                                  <div className="ml-6 mt-2">
+                                    <div className="flex gap-2">
+                                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0">
+                                        {comment.mostRecentReply.profiles?.avatar_url ? (
+                                          <img
+                                            src={comment.mostRecentReply.profiles.avatar_url}
+                                            alt={comment.mostRecentReply.profiles.username}
+                                            className="w-full h-full rounded-full object-cover"
+                                          />
+                                        ) : (
+                                          <span className="font-bold text-primary-foreground text-[10px]">
+                                            {comment.mostRecentReply.profiles?.username?.slice(0, 2).toUpperCase()}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div
+                                        className="flex-1 px-3 py-2 rounded-lg"
+                                        style={{ backgroundColor: "var(--muted)" }}
+                                      >
+                                        <p className="font-semibold text-xs text-foreground">
+                                          @{comment.mostRecentReply.profiles?.username}
+                                        </p>
+                                        <p className="text-foreground/80 text-xs">{comment.mostRecentReply.content}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <p className="text-[10px] text-foreground/40">
+                                            {new Date(comment.mostRecentReply.created_at).toLocaleString()}
+                                          </p>
+                                          <button
+                                            onClick={() => toggleCommentLike(comment.mostRecentReply.id, post.id)}
+                                            className={`flex items-center gap-1 text-[10px] transition-all ${
+                                              likedComments.has(comment.mostRecentReply.id) ? 'text-red-500' : 'text-foreground/40 hover:text-red-400'
+                                            }`}
+                                          >
+                                            <svg
+                                              className={`w-2.5 h-2.5 transition-all ${
+                                                likedComments.has(comment.mostRecentReply.id) ? 'fill-red-500' : 'fill-none stroke-current'
+                                              }`}
+                                              viewBox="0 0 24 24"
+                                              strokeWidth="2"
+                                            >
+                                              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                            </svg>
+                                            <span>{comment.mostRecentReply.likes_count || 0}</span>
+                                          </button>
+                                          {isOwnProfile && comment.mostRecentReply.user_id === profile.username && (
+                                            <button
+                                              onClick={() => deleteComment(post.id, comment.mostRecentReply.id)}
+                                              className="text-foreground/40 hover:text-red-500 transition-colors"
+                                              title="Delete reply"
+                                            >
+                                              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                              </svg>
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {comment.replies.length > 1 && (
+                                      <button
+                                        onClick={() => setExpandedReplies(prev => new Set([...prev, comment.id]))}
+                                        className="text-xs text-primary hover:underline mt-2"
+                                      >
+                                        View all {comment.replies.length} replies
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* All Nested Replies */}
+                                {comment.replies && comment.replies.length > 0 && expandedReplies.has(comment.id) && (
                                   <div className="ml-6 mt-2 space-y-2">
                                     {comment.replies.map((reply: any) => (
                                       <div key={reply.id} className="flex gap-2">
@@ -1433,6 +1540,16 @@ export default function Profile({ setActiveTab, viewingUsername, onUserClick }: 
                                         </div>
                                       </div>
                                     ))}
+                                    <button
+                                      onClick={() => setExpandedReplies(prev => {
+                                        const newSet = new Set(prev)
+                                        newSet.delete(comment.id)
+                                        return newSet
+                                      })}
+                                      className="text-xs text-primary hover:underline mt-2"
+                                    >
+                                      See less
+                                    </button>
                                   </div>
                                 )}
                               </div>
