@@ -128,7 +128,6 @@ export default function Home() {
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
     let mounted = true
-    let authCheckComplete = false
 
     const checkAuth = async () => {
       try {
@@ -146,7 +145,6 @@ export default function Home() {
           setIsLoggedIn(false)
           setUsername("")
           setLoading(false)
-          authCheckComplete = true
           return
         }
 
@@ -168,27 +166,25 @@ export default function Home() {
             if (profile && profile.username) {
               setUsername(profile.username)
               setIsLoggedIn(true)
+              setLoading(false)
             } else {
               console.error("Profile not found or missing username")
               setIsLoggedIn(false)
               setUsername("")
+              setLoading(false)
             }
           } catch (profileErr) {
             console.error("Profile fetch error:", profileErr)
             if (mounted) {
               setIsLoggedIn(false)
               setUsername("")
+              setLoading(false)
             }
           }
         } else {
           setIsLoggedIn(false)
           setUsername("")
-        }
-
-        if (mounted) {
-          console.log("Setting loading to false")
           setLoading(false)
-          authCheckComplete = true
         }
       } catch (err) {
         console.error("Auth check failed:", err)
@@ -196,10 +192,17 @@ export default function Home() {
           setIsLoggedIn(false)
           setUsername("")
           setLoading(false)
-          authCheckComplete = true
         }
       }
     }
+
+    // Set timeout BEFORE calling checkAuth to ensure it always triggers
+    timeoutId = setTimeout(() => {
+      if (mounted) {
+        console.log("Auth check timed out - forcing loading to false")
+        setLoading(false)
+      }
+    }, 3000) // 3 second timeout
 
     checkAuth()
 
@@ -209,11 +212,6 @@ export default function Home() {
       console.log("Auth state changed:", event, session?.user)
 
       if (!mounted) return
-
-      // Clear any pending timeout when auth state changes
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
 
       if (session?.user) {
         const { data: profile } = await supabase
@@ -239,14 +237,6 @@ export default function Home() {
         setLoading(false)
       }
     })
-
-    // Set a backup timeout to ensure loading always completes
-    timeoutId = setTimeout(() => {
-      if (mounted && !authCheckComplete) {
-        console.log("Auth check timed out - forcing loading to false")
-        setLoading(false)
-      }
-    }, 2000) // 2 second timeout
 
     return () => {
       mounted = false
