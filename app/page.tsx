@@ -133,30 +133,31 @@ export default function Home() {
       try {
         console.log("Checking auth...")
 
-        // First check if there's a session in storage
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        // Use getUser() instead of getSession() to force a server call
+        // This ensures we get fresh auth data after middleware refresh
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-        console.log("Session:", session, "Error:", sessionError)
+        console.log("User:", user, "Error:", userError)
 
         if (!mounted) return
 
-        if (sessionError) {
-          console.error("Error getting session:", sessionError)
+        if (userError) {
+          console.error("Error getting user:", userError)
           setIsLoggedIn(false)
           setUsername("")
           setLoading(false)
           return
         }
 
-        if (session?.user) {
+        if (user) {
           // Fetch username from profiles table
-          console.log("Fetching profile for user:", session.user.id)
+          console.log("Fetching profile for user:", user.id)
           
           try {
             const { data: profile, error: profileError } = await supabase
               .from("profiles")
               .select("username")
-              .eq("id", session.user.id)
+              .eq("id", user.id)
               .single()
 
             console.log("Profile data:", profile, "Error:", profileError)
