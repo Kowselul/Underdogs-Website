@@ -152,7 +152,7 @@ export default function Home() {
         if (user) {
           // Fetch username from profiles table
           console.log("Fetching profile for user:", user.id)
-          
+
           try {
             const { data: profile, error: profileError } = await supabase
               .from("profiles")
